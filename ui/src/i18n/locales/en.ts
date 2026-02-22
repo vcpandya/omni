@@ -35,6 +35,7 @@ export const en: TranslationMap = {
     config: "Config",
     debug: "Debug",
     logs: "Logs",
+    activity: "Activity",
   },
   subtitles: {
     agents: "Manage agent workspaces, tools, and identities.",
@@ -47,9 +48,10 @@ export const en: TranslationMap = {
     skills: "Manage skill availability and API key injection.",
     nodes: "Paired devices, capabilities, and command exposure.",
     chat: "Direct gateway chat session for quick interventions.",
-    config: "Edit ~/.openclaw/openclaw.json safely.",
+    config: "Edit ~/.omni/omni.json safely.",
     debug: "Gateway snapshots, events, and manual RPC calls.",
     logs: "Live tail of the gateway file logs.",
+    activity: "Security event timeline with real-time monitoring.",
   },
   overview: {
     access: {

@@ -71,6 +71,7 @@ export class GatewayBrowserClient {
   private connectSent = false;
   private connectTimer: number | null = null;
   private backoffMs = 800;
+  private eventListeners = new Map<string, Set<(event: string, data: unknown) => void>>();
 
   constructor(private opts: GatewayBrowserClientOptions) {}
 
@@ -267,6 +268,7 @@ export class GatewayBrowserClient {
       } catch (err) {
         console.error("[gateway] event handler error:", err);
       }
+      this.emitEvent(evt.event, evt.payload);
       return;
     }
 
@@ -283,6 +285,38 @@ export class GatewayBrowserClient {
         pending.reject(new Error(res.error?.message ?? "request failed"));
       }
       return;
+    }
+  }
+
+  on(event: string, handler: (event: string, data: unknown) => void): void {
+    let handlers = this.eventListeners.get(event);
+    if (!handlers) {
+      handlers = new Set();
+      this.eventListeners.set(event, handlers);
+    }
+    handlers.add(handler);
+  }
+
+  off(event: string, handler: (event: string, data: unknown) => void): void {
+    const handlers = this.eventListeners.get(event);
+    if (handlers) {
+      handlers.delete(handler);
+      if (handlers.size === 0) {
+        this.eventListeners.delete(event);
+      }
+    }
+  }
+
+  private emitEvent(event: string, data: unknown): void {
+    const handlers = this.eventListeners.get(event);
+    if (handlers) {
+      for (const handler of handlers) {
+        try {
+          handler(event, data);
+        } catch (err) {
+          console.error("[gateway] event listener error:", err);
+        }
+      }
     }
   }
 

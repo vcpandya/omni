@@ -68,6 +68,17 @@ import { renderNodes } from "./views/nodes.ts";
 import { renderOverview } from "./views/overview.ts";
 import { renderSessions } from "./views/sessions.ts";
 import { renderSkills } from "./views/skills.ts";
+import {
+  loadActivity,
+  loadMoreActivity,
+  verifyIntegrity,
+  exportActivity,
+  subscribeActivityStream,
+  DEFAULT_ACTIVITY_FILTERS,
+  type ActivityFilters,
+} from "./controllers/activity.ts";
+import { renderActivity } from "./views/activity.ts";
+import { renderWizard } from "./views/wizard.ts";
 
 const AVATAR_DATA_RE = /^data:/i;
 const AVATAR_HTTP_RE = /^https?:\/\//i;
@@ -107,6 +118,29 @@ export function renderApp(state: AppViewState) {
     state.agentsList?.agents?.[0]?.id ??
     null;
 
+  // Onboarding wizard: render full-screen wizard instead of normal shell
+  if (state.onboarding && (state.wizardActive || !state.connected || state.wizardLoading)) {
+    return html`
+      <div class="shell shell--onboarding">
+        ${renderWizard({
+          client: state.client,
+          connected: state.connected,
+          onboarding: state.onboarding,
+          wizardActive: state.wizardActive,
+          wizardSessionId: state.wizardSessionId,
+          wizardStep: state.wizardStep,
+          wizardStepIndex: state.wizardStepIndex,
+          wizardTotalSteps: state.wizardTotalSteps,
+          wizardHistory: state.wizardHistory,
+          wizardStatus: state.wizardStatus,
+          wizardError: state.wizardError,
+          wizardLoading: state.wizardLoading,
+          wizardSelectedValue: state.wizardSelectedValue,
+        })}
+      </div>
+    `;
+  }
+
   return html`
     <div class="shell ${isChat ? "shell--chat" : ""} ${chatFocus ? "shell--chat-focus" : ""} ${state.settings.navCollapsed ? "shell--nav-collapsed" : ""} ${state.onboarding ? "shell--onboarding" : ""}">
       <header class="topbar">
@@ -125,11 +159,11 @@ export function renderApp(state: AppViewState) {
           </button>
           <div class="brand">
             <div class="brand-logo">
-              <img src=${basePath ? `${basePath}/favicon.svg` : "/favicon.svg"} alt="OpenClaw" />
+              <img src=${basePath ? `${basePath}/favicon.svg` : "/favicon.svg"} alt="Omni" />
             </div>
             <div class="brand-text">
-              <div class="brand-title">OPENCLAW</div>
-              <div class="brand-sub">Gateway Dashboard</div>
+              <div class="brand-title">OMNI</div>
+              <div class="brand-sub">Enterprise AI Gateway</div>
             </div>
           </div>
         </div>
@@ -176,7 +210,7 @@ export function renderApp(state: AppViewState) {
           <div class="nav-group__items">
             <a
               class="nav-item nav-item--external"
-              href="https://docs.openclaw.ai"
+              href="https://docs.omni.ai"
               target="_blank"
               rel="noreferrer"
               title="${t("common.docs")} (opens in new tab)"
@@ -320,6 +354,56 @@ export function renderApp(state: AppViewState) {
         }
 
         ${renderUsageTab(state)}
+
+        ${
+          state.tab === "activity"
+            ? renderActivity({
+                client: state.client,
+                connected: state.connected,
+                activityLoading: state.activityLoading,
+                activityError: state.activityError,
+                activityEvents: state.activityEvents,
+                activityFilters: state.activityFilters,
+                activityStreaming: state.activityStreaming,
+                activityTotal: state.activityTotal,
+                activityHasMore: state.activityHasMore,
+                activityIntegrityOk: state.activityIntegrityOk,
+                activityStatsToday: state.activityStatsToday,
+                activityStatsCritical: state.activityStatsCritical,
+                onRefresh: () => loadActivity(state),
+                onLoadMore: () => loadMoreActivity(state),
+                onFilterChange: (filters: ActivityFilters) => {
+                  state.activityFilters = filters;
+                  void loadActivity(state);
+                },
+                onToggleEventExpand: (seq: number) => {
+                  state.activityEvents = state.activityEvents.map((e) =>
+                    e.seq === seq ? { ...e, expanded: !e.expanded } : e,
+                  );
+                },
+                onVerify: () => verifyIntegrity(state),
+                onExport: (format: "json" | "csv" | "jsonl") => {
+                  void exportActivity(state, format).then((data) => {
+                    if (!data) return;
+                    const blob = new Blob([data], { type: "text/plain" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `audit-trail.${format}`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  });
+                },
+                onToggleStream: () => {
+                  if (state.activityStreaming) {
+                    state.activityStreaming = false;
+                  } else {
+                    subscribeActivityStream(state);
+                  }
+                },
+              })
+            : nothing
+        }
 
         ${
           state.tab === "cron"

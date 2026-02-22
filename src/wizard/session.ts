@@ -17,6 +17,8 @@ export type WizardStep = {
   placeholder?: string;
   sensitive?: boolean;
   executor?: "gateway" | "client";
+  /** Rich metadata for enhanced UI rendering (OWASP grid, profile details, etc.). */
+  metadata?: Record<string, unknown>;
 };
 
 export type WizardSessionStatus = "running" | "done" | "cancelled" | "error";
@@ -65,8 +67,8 @@ class WizardSessionPrompter implements WizardPrompter {
     });
   }
 
-  async note(message: string, title?: string): Promise<void> {
-    await this.prompt({ type: "note", title, message, executor: "client" });
+  async note(message: string, title?: string, metadata?: Record<string, unknown>): Promise<void> {
+    await this.prompt({ type: "note", title, message, executor: "client", ...(metadata ? { metadata } : {}) });
   }
 
   async select<T>(params: {

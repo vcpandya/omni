@@ -35,6 +35,7 @@ export const zh_TW: TranslationMap = {
     config: "配置",
     debug: "調試",
     logs: "日誌",
+    activity: "活動",
   },
   subtitles: {
     agents: "管理代理工作區、工具和身份。",
@@ -47,9 +48,10 @@ export const zh_TW: TranslationMap = {
     skills: "管理技能可用性和 API 密鑰注入。",
     nodes: "配對設備、功能和命令公開。",
     chat: "用於快速干預的直接網關聊天會話。",
-    config: "安全地編輯 ~/.openclaw/openclaw.json。",
+    config: "安全地編輯 ~/.omni/omni.json。",
     debug: "網關快照、事件和手動 RPC 調用。",
     logs: "網關文件日志的實時追蹤。",
+    activity: "具有即時監控的安全事件時間線。",
   },
   overview: {
     access: {

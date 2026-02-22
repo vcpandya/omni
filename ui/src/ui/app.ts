@@ -117,6 +117,16 @@ export class OpenClawApp extends LitElement {
   @state() password = "";
   @state() tab: Tab = "chat";
   @state() onboarding = resolveOnboardingMode();
+  @state() wizardActive = false;
+  @state() wizardSessionId: string | null = null;
+  @state() wizardStep: import("./controllers/wizard.js").WizardStep | null = null;
+  @state() wizardStepIndex = 0;
+  @state() wizardTotalSteps = 0;
+  @state() wizardHistory: import("./controllers/wizard.js").WizardStep[] = [];
+  @state() wizardStatus: import("./controllers/wizard.js").WizardSessionStatus = "running";
+  @state() wizardError: string | null = null;
+  @state() wizardLoading = false;
+  wizardSelectedValue: unknown = null;
   @state() connected = false;
   @state() theme: ThemeMode = this.settings.theme ?? "system";
   @state() themeResolved: ResolvedTheme = "dark";
@@ -337,6 +347,21 @@ export class OpenClawApp extends LitElement {
   @state() logsLimit = 500;
   @state() logsMaxBytes = 250_000;
   @state() logsAtBottom = true;
+
+  @state() activityLoading = false;
+  @state() activityError: string | null = null;
+  @state() activityEvents: import("./controllers/activity.ts").AuditEventUI[] = [];
+  @state() activityFilters: import("./controllers/activity.ts").ActivityFilters = {
+    categories: new Set(),
+    severities: new Set(),
+    search: "",
+  };
+  @state() activityStreaming = false;
+  @state() activityTotal = 0;
+  @state() activityHasMore = false;
+  @state() activityIntegrityOk: boolean | null = null;
+  @state() activityStatsToday = 0;
+  @state() activityStatsCritical = 0;
 
   client: GatewayBrowserClient | null = null;
   private chatScrollFrame: number | null = null;

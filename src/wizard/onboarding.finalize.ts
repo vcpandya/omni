@@ -215,8 +215,8 @@ export async function finalizeOnboardingWizard(
       await prompter.note(
         [
           "Docs:",
-          "https://docs.openclaw.ai/gateway/health",
-          "https://docs.openclaw.ai/gateway/troubleshooting",
+          "https://docs.omni.ai/gateway/health",
+          "https://docs.omni.ai/gateway/troubleshooting",
         ].join("\n"),
         "Health check help",
       );
@@ -231,6 +231,32 @@ export async function finalizeOnboardingWizard(
       runtime.error(controlUiAssets.message);
     }
   }
+
+  // Emit review summary for the web wizard dashboard
+  const primaryModel =
+    typeof nextConfig.agents?.defaults?.model === "string"
+      ? nextConfig.agents.defaults.model
+      : typeof nextConfig.agents?.defaults?.model === "object" &&
+          nextConfig.agents?.defaults?.model !== null &&
+          "primary" in (nextConfig.agents.defaults.model as Record<string, unknown>)
+        ? String((nextConfig.agents.defaults.model as Record<string, unknown>).primary)
+        : "Not set";
+  await prompter.note(
+    "Review your configuration before launching.",
+    "Configuration Review",
+    {
+      reviewSummary: {
+        provider: primaryModel.split("/")[0] ?? "unknown",
+        model: primaryModel,
+        gatewayPort: settings.port,
+        gatewayBind: settings.bind,
+        gatewayAuth: settings.authMode,
+        securityProfile:
+          (nextConfig as Record<string, unknown>).complianceProfile ?? "standard",
+        workspace: options.workspaceDir,
+      },
+    },
+  );
 
   await prompter.note(
     [
@@ -279,7 +305,7 @@ export async function finalizeOnboardingWizard(
         : undefined,
       `Gateway WS: ${links.wsUrl}`,
       gatewayStatusLine,
-      "Docs: https://docs.openclaw.ai/web/control-ui",
+      "Docs: https://docs.omni.ai/web/control-ui",
     ]
       .filter(Boolean)
       .join("\n"),
@@ -308,11 +334,11 @@ export async function finalizeOnboardingWizard(
     await prompter.note(
       [
         "Gateway token: shared auth for the Gateway + Control UI.",
-        "Stored in: ~/.openclaw/openclaw.json (gateway.auth.token) or OPENCLAW_GATEWAY_TOKEN.",
-        `View token: ${formatCliCommand("openclaw config get gateway.auth.token")}`,
-        `Generate token: ${formatCliCommand("openclaw doctor --generate-gateway-token")}`,
-        "Web UI stores a copy in this browser's localStorage (openclaw.control.settings.v1).",
-        `Open the dashboard anytime: ${formatCliCommand("openclaw dashboard --no-open")}`,
+        "Stored in: ~/.omni/omni.json (gateway.auth.token) or OMNI_GATEWAY_TOKEN.",
+        `View token: ${formatCliCommand("omni config get gateway.auth.token")}`,
+        `Generate token: ${formatCliCommand("omni doctor --generate-gateway-token")}`,
+        "Web UI stores a copy in this browser's localStorage (omni.control.settings.v1).",
+        `Open the dashboard anytime: ${formatCliCommand("omni dashboard --no-open")}`,
         "If prompted: paste the token into Control UI settings (or use the tokenized dashboard URL).",
       ].join("\n"),
       "Token",
@@ -361,8 +387,8 @@ export async function finalizeOnboardingWizard(
         [
           `Dashboard link (with token): ${authedUrl}`,
           controlUiOpened
-            ? "Opened in your browser. Keep that tab to control OpenClaw."
-            : "Copy/paste this URL in a browser on this machine to control OpenClaw.",
+            ? "Opened in your browser. Keep that tab to control Omni."
+            : "Copy/paste this URL in a browser on this machine to control Omni.",
           controlUiOpenHint,
         ]
           .filter(Boolean)
@@ -371,7 +397,7 @@ export async function finalizeOnboardingWizard(
       );
     } else {
       await prompter.note(
-        `When you're ready: ${formatCliCommand("openclaw dashboard --no-open")}`,
+        `When you're ready: ${formatCliCommand("omni dashboard --no-open")}`,
         "Later",
       );
     }
@@ -382,13 +408,13 @@ export async function finalizeOnboardingWizard(
   await prompter.note(
     [
       "Back up your agent workspace.",
-      "Docs: https://docs.openclaw.ai/concepts/agent-workspace",
+      "Docs: https://docs.omni.ai/concepts/agent-workspace",
     ].join("\n"),
     "Workspace backup",
   );
 
   await prompter.note(
-    "Running agents on your computer is risky — harden your setup: https://docs.openclaw.ai/security",
+    "Running agents on your computer is risky — harden your setup: https://docs.omni.ai/security",
     "Security",
   );
 
@@ -422,8 +448,8 @@ export async function finalizeOnboardingWizard(
       [
         `Dashboard link (with token): ${authedUrl}`,
         controlUiOpened
-          ? "Opened in your browser. Keep that tab to control OpenClaw."
-          : "Copy/paste this URL in a browser on this machine to control OpenClaw.",
+          ? "Opened in your browser. Keep that tab to control Omni."
+          : "Copy/paste this URL in a browser on this machine to control Omni.",
         controlUiOpenHint,
       ]
         .filter(Boolean)
@@ -443,34 +469,34 @@ export async function finalizeOnboardingWizard(
           webSearchKey
             ? "API key: stored in config (tools.web.search.apiKey)."
             : "API key: provided via BRAVE_API_KEY env var (Gateway environment).",
-          "Docs: https://docs.openclaw.ai/tools/web",
+          "Docs: https://docs.omni.ai/tools/web",
         ].join("\n")
       : [
           "If you want your agent to be able to search the web, you’ll need an API key.",
           "",
-          "OpenClaw uses Brave Search for the `web_search` tool. Without a Brave Search API key, web search won’t work.",
+          "Omni uses Brave Search for the `web_search` tool. Without a Brave Search API key, web search won’t work.",
           "",
           "Set it up interactively:",
-          `- Run: ${formatCliCommand("openclaw configure --section web")}`,
+          `- Run: ${formatCliCommand("omni configure --section web")}`,
           "- Enable web_search and paste your Brave Search API key",
           "",
           "Alternative: set BRAVE_API_KEY in the Gateway environment (no config changes).",
-          "Docs: https://docs.openclaw.ai/tools/web",
+          "Docs: https://docs.omni.ai/tools/web",
         ].join("\n"),
     "Web search (optional)",
   );
 
   await prompter.note(
-    'What now: https://openclaw.ai/showcase ("What People Are Building").',
+    'What now: https://omni.ai/showcase ("What People Are Building").',
     "What now",
   );
 
   await prompter.outro(
     controlUiOpened
-      ? "Onboarding complete. Dashboard opened; keep that tab to control OpenClaw."
+      ? "Onboarding complete. Dashboard opened; keep that tab to control Omni."
       : seededInBackground
         ? "Onboarding complete. Web UI seeded in the background; open it anytime with the dashboard link above."
-        : "Onboarding complete. Use the dashboard link above to control OpenClaw.",
+        : "Onboarding complete. Use the dashboard link above to control Omni.",
   );
 
   return { launchedTui };
