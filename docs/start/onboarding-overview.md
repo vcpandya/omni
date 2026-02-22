@@ -26,10 +26,12 @@ openclaw onboard
 ```
 
 Use the CLI wizard when you want full control of the Gateway, workspace,
-channels, and skills. Docs:
+channels, skills, and security profiles. Docs:
 
 - [Onboarding Wizard (CLI)](/start/wizard)
 - [`openclaw onboard` command](/cli/onboard)
+- [Enterprise AI Providers](/start/enterprise-providers) — Azure OpenAI, AWS Bedrock, Vertex AI
+- [Security Onboarding](/security/onboarding-security) — Compliance profiles, OWASP coverage, admin setup
 
 ## macOS app onboarding
 

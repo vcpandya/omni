@@ -62,14 +62,16 @@ The wizard starts with **QuickStart** (defaults) vs **Advanced** (full control).
 
 **Local mode (default)** walks you through these steps:
 
-1. **Model/Auth** — Anthropic API key (recommended), OpenAI, or Custom Provider
-   (OpenAI-compatible, Anthropic-compatible, or Unknown auto-detect). Pick a default model.
+1. **Model/Auth** — Enterprise cloud (Azure OpenAI, AWS Bedrock, Vertex AI),
+   Anthropic API key (recommended), OpenAI, or Custom Provider. Pick a default model.
 2. **Workspace** — Location for agent files (default `~/.openclaw/workspace`). Seeds bootstrap files.
 3. **Gateway** — Port, bind address, auth mode, Tailscale exposure.
-4. **Channels** — WhatsApp, Telegram, Discord, Google Chat, Mattermost, Signal, BlueBubbles, or iMessage.
-5. **Daemon** — Installs a LaunchAgent (macOS) or systemd user unit (Linux/WSL2).
-6. **Health check** — Starts the Gateway and verifies it's running.
-7. **Skills** — Installs recommended skills and optional dependencies.
+4. **Security** — Compliance profile (Zero Trust, SOC 2, HIPAA, Standard, Development),
+   OWASP coverage, and optional enterprise admin profile.
+5. **Channels** — WhatsApp, Telegram, Discord, Google Chat, Mattermost, Signal, BlueBubbles, or iMessage.
+6. **Daemon** — Installs a LaunchAgent (macOS) or systemd user unit (Linux/WSL2).
+7. **Health check** — Starts the Gateway and verifies it's running.
+8. **Skills** — Installs recommended skills and optional dependencies.
 
 <Note>
 Re-running the wizard does **not** wipe anything unless you explicitly choose **Reset** (or pass `--reset`).
@@ -105,6 +107,8 @@ RPC API, and a full list of config fields the wizard writes, see the
 ## Related docs
 
 - CLI command reference: [`openclaw onboard`](/cli/onboard)
+- Enterprise providers: [Enterprise AI Providers](/start/enterprise-providers)
+- Security configuration: [Security Onboarding](/security/onboarding-security)
 - Onboarding overview: [Onboarding Overview](/start/onboarding-overview)
 - macOS app onboarding: [Onboarding](/start/onboarding)
 - Agent first-run ritual: [Agent Bootstrapping](/start/bootstrapping)

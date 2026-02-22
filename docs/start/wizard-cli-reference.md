@@ -112,9 +112,48 @@ What you set:
   - Linux: Avahi (`avahi-browse`)
 </Note>
 
+## Enterprise cloud providers
+
+Three enterprise cloud providers are available as first-class options, presented
+at the top of the provider selection with an **enterprise** badge:
+
+- **Azure OpenAI** — Endpoint URL + API key + deployment name. Supports Azure AI Foundry.
+- **AWS Bedrock** — AWS credentials + region + automatic model discovery. Supports Anthropic, Meta, Mistral, and Amazon models.
+- **Google Vertex AI** — gcloud Application Default Credentials + project + location. Supports Gemini models.
+
+For detailed setup instructions, prerequisites, non-interactive flags, and config
+output examples, see [Enterprise AI Providers](/start/enterprise-providers).
+
+## Security configuration
+
+After gateway setup, the wizard runs a dedicated security step. Choose between:
+
+- **Personal mode** — Applies Standard profile + 3 quick questions (binding, auth, exec)
+- **Enterprise mode** — Full compliance profile selection, customization, admin profile, security audit, and OWASP coverage report
+
+Five compliance profiles are available: Zero Trust, SOC 2 Hardened, HIPAA,
+Standard (default), and Development.
+
+For full details on each profile, enterprise customization options, admin profile
+setup, and OWASP coverage, see [Security Onboarding](/security/onboarding-security).
+
 ## Auth and model options
 
 <AccordionGroup>
+  <Accordion title="Azure OpenAI (enterprise)">
+    Endpoint URL + API key + deployment name.
+    Auto-detects `AZURE_OPENAI_API_KEY`.
+    Full details: [Enterprise Providers](/start/enterprise-providers#azure-openai).
+  </Accordion>
+  <Accordion title="AWS Bedrock (enterprise)">
+    AWS credentials + region + automatic model discovery.
+    Auto-detects `AWS_ACCESS_KEY_ID` / `AWS_PROFILE`.
+    Full details: [Enterprise Providers](/start/enterprise-providers#aws-bedrock).
+  </Accordion>
+  <Accordion title="Google Vertex AI (enterprise)">
+    gcloud Application Default Credentials.
+    Full details: [Enterprise Providers](/start/enterprise-providers#google-vertex-ai).
+  </Accordion>
   <Accordion title="Anthropic API key (recommended)">
     Uses `ANTHROPIC_API_KEY` if present or prompts for a key, then saves it for daemon use.
   </Accordion>
@@ -255,5 +294,7 @@ Signal setup behavior:
 ## Related docs
 
 - Onboarding hub: [Onboarding Wizard (CLI)](/start/wizard)
+- Enterprise providers: [Enterprise AI Providers](/start/enterprise-providers)
+- Security configuration: [Security Onboarding](/security/onboarding-security)
 - Automation and scripts: [CLI Automation](/start/wizard-cli-automation)
 - Command reference: [`openclaw onboard`](/cli/onboard)

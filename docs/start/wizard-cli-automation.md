@@ -31,6 +31,60 @@ openclaw onboard --non-interactive \
 
 Add `--json` for a machine-readable summary.
 
+## Enterprise cloud provider examples
+
+<AccordionGroup>
+  <Accordion title="Azure OpenAI example">
+    ```bash
+    openclaw onboard --non-interactive \
+      --mode local \
+      --auth-choice azure-openai \
+      --azure-endpoint "https://myresource.openai.azure.com" \
+      --azure-api-key "$AZURE_OPENAI_API_KEY" \
+      --azure-deployment-name "gpt-4o-deployment" \
+      --gateway-port 18789 \
+      --gateway-bind loopback
+    ```
+  </Accordion>
+  <Accordion title="AWS Bedrock example">
+    ```bash
+    # Ensure AWS credentials are in the environment
+    export AWS_ACCESS_KEY_ID="..."
+    export AWS_SECRET_ACCESS_KEY="..."
+
+    openclaw onboard --non-interactive \
+      --mode local \
+      --auth-choice bedrock-aws \
+      --bedrock-region us-east-1 \
+      --gateway-port 18789 \
+      --gateway-bind loopback
+    ```
+
+    Or use a named AWS profile:
+    ```bash
+    export AWS_PROFILE=production
+    openclaw onboard --non-interactive \
+      --mode local \
+      --auth-choice bedrock-aws \
+      --bedrock-region us-west-2 \
+      --gateway-port 18789 \
+      --gateway-bind loopback
+    ```
+  </Accordion>
+  <Accordion title="Google Vertex AI example">
+    ```bash
+    # Ensure Application Default Credentials are configured
+    gcloud auth application-default login
+
+    openclaw onboard --non-interactive \
+      --mode local \
+      --auth-choice vertex-gcloud \
+      --gateway-port 18789 \
+      --gateway-bind loopback
+    ```
+  </Accordion>
+</AccordionGroup>
+
 ## Provider-specific examples
 
 <AccordionGroup>
