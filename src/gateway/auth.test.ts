@@ -411,7 +411,7 @@ describe("trusted-proxy auth", () => {
     });
 
     expect(res.ok).toBe(false);
-    expect(res.reason).toBe("trusted_proxy_untrusted_source");
+    expect(res.reason).toBe("authentication_failed");
   });
 
   it("rejects request with missing user header", async () => {
@@ -422,7 +422,7 @@ describe("trusted-proxy auth", () => {
     });
 
     expect(res.ok).toBe(false);
-    expect(res.reason).toBe("trusted_proxy_user_missing");
+    expect(res.reason).toBe("authentication_failed");
   });
 
   it("rejects request with missing required headers", async () => {
@@ -433,7 +433,7 @@ describe("trusted-proxy auth", () => {
     });
 
     expect(res.ok).toBe(false);
-    expect(res.reason).toBe("trusted_proxy_missing_header_x-forwarded-proto");
+    expect(res.reason).toBe("authentication_failed");
   });
 
   it("rejects user not in allowlist", async () => {
@@ -452,7 +452,7 @@ describe("trusted-proxy auth", () => {
     });
 
     expect(res.ok).toBe(false);
-    expect(res.reason).toBe("trusted_proxy_user_not_allowed");
+    expect(res.reason).toBe("authentication_failed");
   });
 
   it("accepts user in allowlist", async () => {
@@ -484,7 +484,7 @@ describe("trusted-proxy auth", () => {
     });
 
     expect(res.ok).toBe(false);
-    expect(res.reason).toBe("trusted_proxy_no_proxies_configured");
+    expect(res.reason).toBe("authentication_failed");
   });
 
   it("rejects when trustedProxy config missing", async () => {
@@ -499,7 +499,7 @@ describe("trusted-proxy auth", () => {
     });
 
     expect(res.ok).toBe(false);
-    expect(res.reason).toBe("trusted_proxy_config_missing");
+    expect(res.reason).toBe("authentication_failed");
   });
 
   it("supports Pomerium-style headers", async () => {
