@@ -23,6 +23,24 @@ const AUTH_CHOICE_GROUP_DEFS: {
   choices: AuthChoice[];
 }[] = [
   {
+    value: "azure-openai",
+    label: "Azure OpenAI",
+    hint: "Azure endpoint + API key + deployment",
+    choices: ["azure-openai"],
+  },
+  {
+    value: "bedrock-aws",
+    label: "AWS Bedrock",
+    hint: "AWS credentials + region + model discovery",
+    choices: ["bedrock-aws"],
+  },
+  {
+    value: "vertex-gcloud",
+    label: "Google Vertex AI",
+    hint: "gcloud ADC + Gemini models",
+    choices: ["vertex-gcloud"],
+  },
+  {
     value: "openai",
     label: "OpenAI",
     hint: "Codex OAuth + API key",
@@ -175,6 +193,21 @@ const AUTH_CHOICE_GROUP_DEFS: {
 ];
 
 const BASE_AUTH_CHOICE_OPTIONS: ReadonlyArray<AuthChoiceOption> = [
+  {
+    value: "azure-openai",
+    label: "Azure OpenAI / Azure AI Foundry",
+    hint: "Endpoint URL + API key + deployment name",
+  },
+  {
+    value: "bedrock-aws",
+    label: "AWS Bedrock",
+    hint: "Region + AWS credentials (profile or access key)",
+  },
+  {
+    value: "vertex-gcloud",
+    label: "Google Vertex AI",
+    hint: "gcloud Application Default Credentials",
+  },
   {
     value: "token",
     label: "Anthropic token (paste setup-token)",

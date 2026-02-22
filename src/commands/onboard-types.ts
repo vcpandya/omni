@@ -48,6 +48,9 @@ export type AuthChoice =
   | "volcengine-api-key"
   | "byteplus-api-key"
   | "qianfan-api-key"
+  | "azure-openai"
+  | "bedrock-aws"
+  | "vertex-gcloud"
   | "custom-api-key"
   | "skip";
 export type AuthChoiceGroupId =
@@ -75,6 +78,9 @@ export type AuthChoiceGroupId =
   | "xai"
   | "volcengine"
   | "byteplus"
+  | "azure-openai"
+  | "bedrock-aws"
+  | "vertex-gcloud"
   | "custom";
 export type GatewayAuthChoice = "token" | "password";
 export type ResetScope = "config" | "config+creds+sessions" | "full";
@@ -126,6 +132,11 @@ export type OnboardOptions = {
   volcengineApiKey?: string;
   byteplusApiKey?: string;
   qianfanApiKey?: string;
+  azureEndpoint?: string;
+  azureApiKey?: string;
+  azureDeploymentName?: string;
+  bedrockRegion?: string;
+  bedrockProviderFilter?: string;
   customBaseUrl?: string;
   customApiKey?: string;
   customModelId?: string;

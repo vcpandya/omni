@@ -45,6 +45,9 @@ const PREFERRED_PROVIDER_BY_AUTH_CHOICE: Partial<Record<AuthChoice, string>> = {
   "byteplus-api-key": "byteplus",
   "minimax-portal": "minimax-portal",
   "qianfan-api-key": "qianfan",
+  "azure-openai": "azure-openai",
+  "bedrock-aws": "amazon-bedrock",
+  "vertex-gcloud": "google-vertex",
   "custom-api-key": "custom",
 };
 

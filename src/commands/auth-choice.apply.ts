@@ -2,6 +2,9 @@ import type { OpenClawConfig } from "../config/config.js";
 import type { RuntimeEnv } from "../runtime.js";
 import type { WizardPrompter } from "../wizard/prompts.js";
 import { applyAuthChoiceAnthropic } from "./auth-choice.apply.anthropic.js";
+import { applyAuthChoiceAzureOpenAI } from "./auth-choice.apply.azure-openai.js";
+import { applyAuthChoiceBedrock } from "./auth-choice.apply.bedrock.js";
+import { applyAuthChoiceVertex } from "./auth-choice.apply.vertex.js";
 import { applyAuthChoiceApiProviders } from "./auth-choice.apply.api-providers.js";
 import { applyAuthChoiceBytePlus } from "./auth-choice.apply.byteplus.js";
 import { applyAuthChoiceCopilotProxy } from "./auth-choice.apply.copilot-proxy.js";
@@ -37,6 +40,9 @@ export async function applyAuthChoice(
   params: ApplyAuthChoiceParams,
 ): Promise<ApplyAuthChoiceResult> {
   const handlers: Array<(p: ApplyAuthChoiceParams) => Promise<ApplyAuthChoiceResult | null>> = [
+    applyAuthChoiceAzureOpenAI,
+    applyAuthChoiceBedrock,
+    applyAuthChoiceVertex,
     applyAuthChoiceAnthropic,
     applyAuthChoiceVllm,
     applyAuthChoiceOpenAI,
