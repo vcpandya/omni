@@ -15,6 +15,8 @@ export type SearchRowResult = {
   score: number;
   snippet: string;
   source: SearchSource;
+  /** Graph relationship context (populated when graph memory is enabled). */
+  graphContext?: string[];
 };
 
 export async function searchVector(params: {

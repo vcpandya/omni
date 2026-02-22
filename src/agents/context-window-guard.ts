@@ -1,4 +1,6 @@
 import type { OpenClawConfig } from "../config/config.js";
+import type { TokenBudgetConfig } from "../config/types.memory.js";
+import { allocateBudget, type BudgetAllocation } from "./token-budget.js";
 
 export const CONTEXT_WINDOW_HARD_MIN_TOKENS = 16_000;
 export const CONTEXT_WINDOW_WARN_BELOW_TOKENS = 32_000;
@@ -8,6 +10,8 @@ export type ContextWindowSource = "model" | "modelsConfig" | "agentContextTokens
 export type ContextWindowInfo = {
   tokens: number;
   source: ContextWindowSource;
+  /** Token budget allocation (present when tokenBudget config is enabled). */
+  budget?: BudgetAllocation;
 };
 
 function normalizePositiveInt(value: unknown): number | null {
@@ -42,11 +46,35 @@ export function resolveContextWindowInfo(params: {
       : { tokens: Math.floor(params.defaultTokens), source: "default" as const };
 
   const capTokens = normalizePositiveInt(params.cfg?.agents?.defaults?.contextTokens);
-  if (capTokens && capTokens < baseInfo.tokens) {
-    return { tokens: capTokens, source: "agentContextTokens" };
+  const resolved = capTokens && capTokens < baseInfo.tokens
+    ? { tokens: capTokens, source: "agentContextTokens" as const }
+    : baseInfo;
+
+  // Optionally compute zone-based token budget allocation
+  const budgetCfg = resolveTokenBudgetConfig(params.cfg);
+  if (budgetCfg?.enabled) {
+    return {
+      ...resolved,
+      budget: allocateBudget(resolved.tokens, budgetCfg),
+    };
   }
 
-  return baseInfo;
+  return resolved;
+}
+
+/**
+ * Resolve token budget configuration from OpenClawConfig.
+ * Returns null when the token budget system is disabled or absent.
+ */
+export function resolveTokenBudgetConfig(
+  cfg: OpenClawConfig | undefined,
+): TokenBudgetConfig | null {
+  const raw = (cfg?.agents?.defaults as Record<string, unknown> | undefined)
+    ?.tokenBudget as TokenBudgetConfig | undefined;
+  if (!raw || raw.enabled !== true) {
+    return null;
+  }
+  return raw;
 }
 
 export type ContextWindowGuardResult = ContextWindowInfo & {

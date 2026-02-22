@@ -396,3 +396,138 @@ export function pruneHistoryForContextShare(params: {
 export function resolveContextWindowTokens(model?: ExtensionContext["model"]): number {
   return Math.max(1, Math.floor(model?.contextWindow ?? DEFAULT_CONTEXT_TOKENS));
 }
+
+// ---------------------------------------------------------------------------
+// Incremental Summarization (opt-in via agents.defaults.compaction.incremental)
+// ---------------------------------------------------------------------------
+
+/** A single digest in the rolling summary chain. */
+export interface SummaryDigest {
+  /** Zero-based index in the chain. */
+  index: number;
+  /** Approximate token count of this digest. */
+  tokens: number;
+  /** The summary text. */
+  text: string;
+  /** Number of original messages this digest covers. */
+  messageCount: number;
+}
+
+export interface IncrementalSummaryState {
+  /** Ordered chain of digests (oldest first). */
+  digests: SummaryDigest[];
+  /** Index into the original messages array: messages[0..cursor) are summarized. */
+  cursor: number;
+}
+
+const DEFAULT_INCREMENTAL_BLOCK_SIZE = 5; // summarize every N turns
+const DEFAULT_VERBATIM_KEEP = 5; // keep last N turns verbatim
+const DEFAULT_DIGEST_TARGET_TOKENS = 200;
+
+/**
+ * Build an incremental summary state from a message history.
+ * Splits messages into blocks of `blockSize`, summarizes each into a ~200-token
+ * digest, and keeps the last `verbatimKeep` messages verbatim.
+ *
+ * Returns the updated state plus the messages that should be included in the
+ * context (summaries + verbatim recent turns).
+ */
+export async function buildIncrementalSummary(params: {
+  messages: AgentMessage[];
+  state: IncrementalSummaryState;
+  model: NonNullable<ExtensionContext["model"]>;
+  apiKey: string;
+  signal: AbortSignal;
+  contextWindow: number;
+  blockSize?: number;
+  verbatimKeep?: number;
+  digestTargetTokens?: number;
+  customInstructions?: string;
+}): Promise<{
+  state: IncrementalSummaryState;
+  contextMessages: AgentMessage[];
+}> {
+  const blockSize = Math.max(1, params.blockSize ?? DEFAULT_INCREMENTAL_BLOCK_SIZE);
+  const verbatimKeep = Math.max(1, params.verbatimKeep ?? DEFAULT_VERBATIM_KEEP);
+  const digestTarget = Math.max(50, params.digestTargetTokens ?? DEFAULT_DIGEST_TARGET_TOKENS);
+  const { messages, state } = params;
+
+  if (messages.length === 0) {
+    return { state, contextMessages: [] };
+  }
+
+  // How many messages from the tail to keep verbatim
+  const verbatimStart = Math.max(0, messages.length - verbatimKeep);
+
+  // Only summarize messages between state.cursor and verbatimStart
+  const summarizableEnd = verbatimStart;
+  let cursor = state.cursor;
+  const digests = [...state.digests];
+
+  while (cursor + blockSize <= summarizableEnd) {
+    const block = messages.slice(cursor, cursor + blockSize);
+    const maxChunkTokens = Math.max(
+      digestTarget * 2,
+      Math.floor(params.contextWindow * 0.3),
+    );
+
+    let digestText: string;
+    try {
+      digestText = await summarizeWithFallback({
+        messages: block,
+        model: params.model,
+        apiKey: params.apiKey,
+        signal: params.signal,
+        reserveTokens: digestTarget,
+        maxChunkTokens,
+        contextWindow: params.contextWindow,
+        customInstructions:
+          `Summarize in ~${digestTarget} tokens. Focus on decisions, facts, and outcomes.` +
+          (params.customInstructions ? `\n${params.customInstructions}` : ""),
+      });
+    } catch {
+      // If summarization fails, stop here — keep remaining messages verbatim
+      break;
+    }
+
+    digests.push({
+      index: digests.length,
+      tokens: estimateMessagesTokens([{ role: "user", content: digestText, timestamp: Date.now() }]),
+      text: digestText,
+      messageCount: block.length,
+    });
+    cursor += blockSize;
+  }
+
+  // Build context: summary digests as a system-like message + verbatim recent
+  const contextMessages: AgentMessage[] = [];
+
+  if (digests.length > 0) {
+    const summaryText = digests.map(
+      (d, i) => `[Summary ${i + 1}/${digests.length}]\n${d.text}`,
+    ).join("\n\n");
+    contextMessages.push({
+      role: "user",
+      content: `[Prior conversation summary]\n\n${summaryText}`,
+      timestamp: Date.now(),
+    } as AgentMessage);
+  }
+
+  // Add any unsummarized messages between cursor and verbatimStart
+  if (cursor < verbatimStart) {
+    contextMessages.push(...messages.slice(cursor, verbatimStart));
+  }
+
+  // Add verbatim recent messages
+  contextMessages.push(...messages.slice(verbatimStart));
+
+  return {
+    state: { digests, cursor },
+    contextMessages,
+  };
+}
+
+/** Create an empty incremental summary state. */
+export function createEmptyIncrementalState(): IncrementalSummaryState {
+  return { digests: [], cursor: 0 };
+}

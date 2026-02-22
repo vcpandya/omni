@@ -29,6 +29,10 @@ import type {
   MemorySource,
   MemorySyncProgressUpdate,
 } from "./types.js";
+import { GraphStore, type GraphDb } from "./graph/graph-store.js";
+import { extractEntitiesHeuristic } from "./graph/entity-extractor.js";
+import { searchGraph } from "./graph/graph-search.js";
+import { mergeResults, type BaseSearchResult } from "./graph/graph-merge.js";
 const SNIPPET_MAX_CHARS = 700;
 const VECTOR_TABLE = "chunks_vec";
 const FTS_TABLE = "chunks_fts";
@@ -97,6 +101,7 @@ export class MemoryIndexManager extends MemoryManagerEmbeddingOps implements Mem
   >();
   private sessionWarm = new Set<string>();
   private syncing: Promise<void> | null = null;
+  private graphStore: GraphStore | null = null;
 
   static async get(params: {
     cfg: OpenClawConfig;
@@ -183,6 +188,37 @@ export class MemoryIndexManager extends MemoryManagerEmbeddingOps implements Mem
     const statusOnly = params.purpose === "status";
     this.dirty = this.sources.has("memory") && (statusOnly ? !meta : true);
     this.batch = this.resolveBatchConfig();
+
+    // Initialize graph memory store if enabled
+    const graphCfg = params.cfg.memory?.graph;
+    if (graphCfg?.enabled) {
+      try {
+        // Reuse the same DatabaseSync connection as a GraphDb adapter.
+        // The GraphDb interface uses `unknown` params while DatabaseSync uses
+        // `SQLInputValue` — cast through an intermediate layer.
+        const db = this.db;
+        const graphDb: GraphDb = {
+          exec: (sql: string) => db.exec(sql),
+          prepare: (sql: string) => {
+            const stmt = db.prepare(sql);
+            return {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              run: (...p: unknown[]) => (stmt as any).run(...p) as { changes: number },
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              get: (...p: unknown[]) => (stmt as any).get(...p) as Record<string, unknown> | undefined,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              all: (...p: unknown[]) => (stmt as any).all(...p) as Array<Record<string, unknown>>,
+            };
+          },
+        };
+        this.graphStore = new GraphStore(graphDb);
+        this.graphStore.initialize();
+        log.info("Graph memory store initialized");
+      } catch (err) {
+        log.warn(`Failed to initialize graph store: ${String(err)}`);
+        this.graphStore = null;
+      }
+    }
   }
 
   async warmSession(sessionKey?: string): Promise<void> {
@@ -285,6 +321,44 @@ export class MemoryIndexManager extends MemoryManagerEmbeddingOps implements Mem
       mmr: hybrid.mmr,
       temporalDecay: hybrid.temporalDecay,
     });
+
+    // If graph memory is enabled, merge graph-boosted results
+    if (this.graphStore) {
+      try {
+        const graphCfg = this.cfg.memory?.graph?.search;
+        const graphResults = searchGraph(this.graphStore, cleaned, {
+          maxDepth: graphCfg?.maxDepth,
+          maxNodes: graphCfg?.maxNodes,
+          timeoutMs: graphCfg?.timeoutMs,
+        });
+        const baseResults: BaseSearchResult[] = merged.map((r) => ({
+          chunkId: (r as MemorySearchResult & { id?: string }).id ?? r.path,
+          score: r.score,
+          snippet: r.snippet,
+          path: r.path,
+          startLine: r.startLine,
+          endLine: r.endLine,
+          source: r.source,
+        }));
+        const graphMerged = mergeResults(baseResults, graphResults, {
+          graphWeight: graphCfg?.graphWeight,
+        });
+        return graphMerged
+          .filter((entry) => entry.score >= minScore)
+          .slice(0, maxResults)
+          .map((entry) => ({
+            path: entry.path ?? "",
+            startLine: entry.startLine ?? 0,
+            endLine: entry.endLine ?? 0,
+            score: entry.score,
+            snippet: entry.snippet ?? "",
+            source: entry.source ?? "memory",
+            graphContext: entry.relationships,
+          } as MemorySearchResult));
+      } catch (err) {
+        log.warn(`Graph search failed, using base results: ${String(err)}`);
+      }
+    }
 
     return merged.filter((entry) => entry.score >= minScore).slice(0, maxResults);
   }
@@ -598,6 +672,44 @@ export class MemoryIndexManager extends MemoryManagerEmbeddingOps implements Mem
       const message = err instanceof Error ? err.message : String(err);
       return { ok: false, error: message };
     }
+  }
+
+  /**
+   * Extract entities from a text chunk and store them in the graph.
+   * Called during sync for each new chunk when graph memory is enabled.
+   */
+  extractAndStoreGraphEntities(chunkId: string, text: string): void {
+    if (!this.graphStore) return;
+    try {
+      const result = extractEntitiesHeuristic(text);
+      for (const entity of result.entities) {
+        const node = this.graphStore.upsertNode(
+          entity.name,
+          entity.type as "person" | "project" | "concept" | "tool" | "file" | "date" | "organization" | "url" | "tag" | "unknown",
+          entity.aliases ? { aliases: entity.aliases } : undefined,
+        );
+        this.graphStore.linkNodeToChunk(node.id, chunkId);
+      }
+      for (const rel of result.relationships) {
+        const sourceNode = this.graphStore.findNodesByName(rel.source);
+        const targetNode = this.graphStore.findNodesByName(rel.target);
+        if (sourceNode.length > 0 && targetNode.length > 0) {
+          this.graphStore.upsertEdge(
+            sourceNode[0].id,
+            targetNode[0].id,
+            rel.relation,
+            rel.confidence,
+          );
+        }
+      }
+    } catch (err) {
+      log.warn(`Graph entity extraction failed for chunk ${chunkId}: ${String(err)}`);
+    }
+  }
+
+  /** Get the graph store instance (for use by graph query tools). */
+  getGraphStore(): GraphStore | null {
+    return this.graphStore;
   }
 
   async close(): Promise<void> {

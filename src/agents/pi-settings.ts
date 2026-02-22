@@ -1,4 +1,5 @@
 import type { OpenClawConfig } from "../config/config.js";
+import type { TokenBudgetConfig } from "../config/types.memory.js";
 
 export const DEFAULT_PI_COMPACTION_RESERVE_TOKENS_FLOOR = 20_000;
 
@@ -94,4 +95,32 @@ export function applyPiCompactionSettingsFromConfig(params: {
       keepRecentTokens: targetKeepRecentTokens,
     },
   };
+}
+
+/**
+ * Resolve token budget configuration from OpenClawConfig.
+ * Returns the config object if enabled, or null when disabled/absent.
+ */
+export function resolveTokenBudgetConfig(cfg?: OpenClawConfig): TokenBudgetConfig | null {
+  const raw = (cfg?.agents?.defaults as Record<string, unknown> | undefined)
+    ?.tokenBudget as TokenBudgetConfig | undefined;
+  if (!raw || raw.enabled !== true) {
+    return null;
+  }
+  return raw;
+}
+
+/**
+ * Resolve semantic cache configuration from OpenClawConfig.
+ * Returns the config object if enabled, or null when disabled/absent.
+ */
+export function resolveSemanticCacheConfig(
+  cfg?: OpenClawConfig,
+): { enabled: boolean; similarityThreshold?: number; ttlMs?: number; maxEntries?: number; excludeModels?: string[] } | null {
+  const raw = (cfg?.agents?.defaults as Record<string, unknown> | undefined)
+    ?.semanticCache as Record<string, unknown> | undefined;
+  if (!raw || raw.enabled !== true) {
+    return null;
+  }
+  return raw as { enabled: boolean; similarityThreshold?: number; ttlMs?: number; maxEntries?: number; excludeModels?: string[] };
 }

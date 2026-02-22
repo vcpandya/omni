@@ -3,6 +3,7 @@ import type { OpenClawConfig } from "../../config/config.js";
 import type { MemoryCitationsMode } from "../../config/types.memory.js";
 import { resolveMemoryBackendConfig } from "../../memory/backend-config.js";
 import { getMemorySearchManager } from "../../memory/index.js";
+import { searchGraph } from "../../memory/graph/graph-search.js";
 import type { MemorySearchResult } from "../../memory/types.js";
 import { parseAgentSessionKey } from "../../routing/session-key.js";
 import { resolveSessionAgentId } from "../agent-scope.js";
@@ -134,6 +135,83 @@ export function createMemoryGetTool(options: {
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         return jsonResult({ path: relPath, text: "", disabled: true, error: message });
+      }
+    },
+  };
+}
+
+const MemoryGraphQuerySchema = Type.Object({
+  query: Type.String(),
+  maxDepth: Type.Optional(Type.Number()),
+  maxResults: Type.Optional(Type.Number()),
+});
+
+/**
+ * Create the memory_graph_query tool.
+ * Only registered when graph memory is enabled in config.
+ */
+export function createMemoryGraphQueryTool(options: {
+  config?: OpenClawConfig;
+  agentSessionKey?: string;
+}): AnyAgentTool | null {
+  const ctx = resolveMemoryToolContext(options);
+  if (!ctx) {
+    return null;
+  }
+  const { cfg, agentId } = ctx;
+
+  // Only register when graph memory is enabled
+  if (!cfg.memory?.graph?.enabled) {
+    return null;
+  }
+
+  return {
+    label: "Memory Graph Query",
+    name: "memory_graph_query",
+    description:
+      "Query the knowledge graph to find entities and their relationships. " +
+      "Returns entities (people, projects, concepts, files) and edges connecting them. " +
+      "Use when you need relationship context: who worked on what, how concepts relate, " +
+      "or to explore connections between entities mentioned in memory.",
+    parameters: MemoryGraphQuerySchema,
+    execute: async (_toolCallId, params) => {
+      const query = readStringParam(params, "query", { required: true });
+      const maxDepth = readNumberParam(params, "maxDepth");
+      const maxResults = readNumberParam(params, "maxResults");
+      const { manager, error } = await getMemorySearchManager({ cfg, agentId });
+      if (!manager) {
+        return jsonResult({ entities: [], relationships: [], disabled: true, error });
+      }
+      try {
+        // Access graph store through the manager
+        const graphStore = (manager as { getGraphStore?: () => unknown }).getGraphStore?.();
+        if (!graphStore) {
+          return jsonResult({
+            entities: [],
+            relationships: [],
+            disabled: true,
+            error: "Graph store not available",
+          });
+        }
+        const graphCfg = cfg.memory?.graph?.search;
+        const results = searchGraph(graphStore as Parameters<typeof searchGraph>[0], query, {
+          maxDepth: maxDepth ?? graphCfg?.maxDepth,
+          maxNodes: graphCfg?.maxNodes,
+          timeoutMs: graphCfg?.timeoutMs,
+        });
+        const limited = maxResults ? results.slice(0, maxResults) : results;
+        return jsonResult({
+          query,
+          results: limited.map((r) => ({
+            chunkId: r.chunkId,
+            boost: r.boost,
+            relationships: r.relationships,
+          })),
+          stats: (graphStore as { stats?: () => unknown }).stats?.(),
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return jsonResult({ entities: [], relationships: [], disabled: true, error: message });
       }
     },
   };

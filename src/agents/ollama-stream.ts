@@ -236,7 +236,40 @@ export function buildAssistantMessage(
   };
 }
 
+// ── Response shape validation ─────────────────────────────────────────────
+
+/** Runtime validation of Ollama NDJSON chunks to prevent shape mismatches. */
+function isValidOllamaChunk(parsed: unknown): parsed is OllamaChatResponse {
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return false;
+  const obj = parsed as Record<string, unknown>;
+  if (typeof obj.done !== "boolean") return false;
+  // message is optional in error responses but required in normal chunks
+  if (obj.message !== undefined) {
+    if (typeof obj.message !== "object" || obj.message === null) return false;
+    const msg = obj.message as Record<string, unknown>;
+    if (typeof msg.role !== "string") return false;
+    // content and reasoning must be strings if present
+    if (msg.content !== undefined && typeof msg.content !== "string") return false;
+    if (msg.reasoning !== undefined && typeof msg.reasoning !== "string") return false;
+    // tool_calls must be an array if present
+    if (msg.tool_calls !== undefined && !Array.isArray(msg.tool_calls)) return false;
+  }
+  return true;
+}
+
+/** Validate individual tool call structure from Ollama response. */
+function isValidToolCall(tc: unknown): tc is OllamaToolCall {
+  if (!tc || typeof tc !== "object" || Array.isArray(tc)) return false;
+  const obj = tc as Record<string, unknown>;
+  if (!obj.function || typeof obj.function !== "object") return false;
+  const fn = obj.function as Record<string, unknown>;
+  return typeof fn.name === "string" && fn.name.length > 0;
+}
+
 // ── NDJSON streaming parser ─────────────────────────────────────────────────
+
+/** Maximum accumulated content size (16 MB) to prevent memory exhaustion. */
+const MAX_ACCUMULATED_BYTES = 16 * 1024 * 1024;
 
 export async function* parseNdjsonStream(
   reader: ReadableStreamDefaultReader<Uint8Array>,
@@ -259,7 +292,12 @@ export async function* parseNdjsonStream(
         continue;
       }
       try {
-        yield JSON.parse(trimmed) as OllamaChatResponse;
+        const parsed: unknown = JSON.parse(trimmed);
+        if (isValidOllamaChunk(parsed)) {
+          yield parsed;
+        } else {
+          console.warn("[ollama-stream] Skipping chunk with unexpected shape");
+        }
       } catch {
         console.warn("[ollama-stream] Skipping malformed NDJSON line:", trimmed.slice(0, 120));
       }
@@ -268,7 +306,10 @@ export async function* parseNdjsonStream(
 
   if (buffer.trim()) {
     try {
-      yield JSON.parse(buffer.trim()) as OllamaChatResponse;
+      const parsed: unknown = JSON.parse(buffer.trim());
+      if (isValidOllamaChunk(parsed)) {
+        yield parsed;
+      }
     } catch {
       console.warn(
         "[ollama-stream] Skipping malformed trailing data:",
@@ -357,10 +398,21 @@ export function createOllamaStreamFn(baseUrl: string): StreamFn {
             accumulatedContent += chunk.message.reasoning;
           }
 
+          // Guard against unbounded content accumulation
+          if (accumulatedContent.length > MAX_ACCUMULATED_BYTES) {
+            throw new Error(
+              `Ollama response exceeded maximum size (${MAX_ACCUMULATED_BYTES} bytes)`,
+            );
+          }
+
           // Ollama sends tool_calls in intermediate (done:false) chunks,
           // NOT in the final done:true chunk. Collect from all chunks.
           if (chunk.message?.tool_calls) {
-            accumulatedToolCalls.push(...chunk.message.tool_calls);
+            for (const tc of chunk.message.tool_calls) {
+              if (isValidToolCall(tc)) {
+                accumulatedToolCalls.push(tc);
+              }
+            }
           }
 
           if (chunk.done) {

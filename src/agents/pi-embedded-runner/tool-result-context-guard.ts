@@ -1,4 +1,5 @@
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
+import { computeToolRelevance, selectToolsByBudget, type ToolRelevanceEntry } from "../token-budget.js";
 
 const CHARS_PER_TOKEN_ESTIMATE = 4;
 // Keep a conservative input budget to absorb tokenizer variance and provider framing overhead.
@@ -292,6 +293,35 @@ function enforceToolResultContextBudgetInPlace(params: {
     messages,
     charsNeeded: currentChars - contextBudgetChars,
   });
+}
+
+/**
+ * Filter tool descriptions by relevance to the latest user message.
+ * When enabled, scores each tool against the user message and selects those
+ * that fit within the tool zone budget, always keeping pinned and recently-used tools.
+ *
+ * Returns the names of tools to include (empty array means include all — fallback).
+ */
+export function filterToolsByRelevance(params: {
+  tools: Array<{ name: string; description: string; descriptionTokens: number }>;
+  userMessage: string;
+  toolBudgetTokens: number;
+  recentToolNames?: Set<string>;
+  pinnedToolNames?: Set<string>;
+}): string[] {
+  if (!params.userMessage || params.tools.length === 0 || params.toolBudgetTokens <= 0) {
+    return [];
+  }
+
+  const entries: ToolRelevanceEntry[] = params.tools.map((tool) => ({
+    name: tool.name,
+    descriptionTokens: tool.descriptionTokens,
+    recentlyUsed: params.recentToolNames?.has(tool.name) ?? false,
+    pinned: params.pinnedToolNames?.has(tool.name) ?? false,
+    relevance: computeToolRelevance(params.userMessage, tool.name, tool.description),
+  }));
+
+  return selectToolsByBudget(entries, params.toolBudgetTokens);
 }
 
 export function installToolResultContextGuard(params: {
