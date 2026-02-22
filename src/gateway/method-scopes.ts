@@ -19,6 +19,9 @@ export const CLI_DEFAULT_OPERATOR_SCOPES: OperatorScope[] = [
 
 const NODE_ROLE_METHODS = new Set(["node.invoke.result", "node.event", "skills.bins"]);
 
+/** Methods that bypass scope checks (authenticated via their own token mechanism). */
+const PUBLIC_TOKEN_METHODS = new Set(["operators.redeem", "sso.callback"]);
+
 const METHOD_SCOPE_GROUPS: Record<OperatorScope, readonly string[]> = {
   [APPROVALS_SCOPE]: [
     "exec.approval.request",
@@ -76,6 +79,25 @@ const METHOD_SCOPE_GROUPS: Record<OperatorScope, readonly string[]> = {
     "audit.query",
     "audit.stream",
     "audit.verify",
+    // Operator read
+    "operators.list",
+    "operators.get",
+    "operators.sessions",
+    // Remote agent read
+    "remote.agents.list",
+    "remote.agents.get",
+    "remote.agents.diff",
+    "remote.agents.drift",
+    // SSO read
+    "sso.status",
+    // Fleet read
+    "fleet.overview",
+    "fleet.compliance",
+    "fleet.operations.list",
+    "fleet.operations.get",
+    // Skill trust read
+    "skills.trust.verify",
+    "skills.trust.audit",
   ],
   [WRITE_SCOPE]: [
     "send",
@@ -119,6 +141,27 @@ const METHOD_SCOPE_GROUPS: Record<OperatorScope, readonly string[]> = {
     "agents.files.set",
     "audit.export",
     "device.wipe",
+    // Operator admin
+    "operators.create",
+    "operators.update",
+    "operators.delete",
+    "operators.invite",
+    // Remote agent admin
+    "remote.agents.push",
+    "remote.agents.pull",
+    "remote.agents.sync",
+    "remote.agents.remove",
+    // SSO admin
+    "sso.test",
+    // Fleet admin
+    "fleet.policy.push",
+    "fleet.tokens.rotate",
+    "fleet.wipe",
+    "fleet.agents.sync",
+    // Skill trust admin
+    "skills.trust.set",
+    "skills.trust.quarantine",
+    "skills.trust.release",
   ],
 };
 
@@ -182,6 +225,10 @@ export function authorizeOperatorScopesForMethod(
   method: string,
   scopes: readonly string[],
 ): { allowed: true } | { allowed: false; missingScope: OperatorScope } {
+  // Public token methods bypass scope checks (they validate their own tokens)
+  if (PUBLIC_TOKEN_METHODS.has(method)) {
+    return { allowed: true };
+  }
   if (scopes.includes(ADMIN_SCOPE)) {
     return { allowed: true };
   }

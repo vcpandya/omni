@@ -120,6 +120,99 @@ export function emitSandboxEvent(
   });
 }
 
+// ── Operator Events ─────────────────────────────────────────────
+
+export function emitOperatorEvent(
+  actor: AuditActor,
+  action:
+    | "operator.created"
+    | "operator.updated"
+    | "operator.deleted"
+    | "operator.invited"
+    | "operator.disabled"
+    | "operator.login",
+  operatorId: string,
+  detail?: Record<string, unknown>,
+): void {
+  const severity: AuditEventSeverity =
+    action === "operator.deleted" || action === "operator.disabled" ? "warn" : "info";
+  recordAuditEvent({
+    category: "operator",
+    action,
+    severity,
+    actor,
+    resource: operatorId,
+    detail,
+  });
+}
+
+// ── Remote Agent Events ─────────────────────────────────────────
+
+export function emitRemoteAgentEvent(
+  actor: AuditActor,
+  action:
+    | "remote-agent.pushed"
+    | "remote-agent.pulled"
+    | "remote-agent.synced"
+    | "remote-agent.removed"
+    | "remote-agent.drift_detected",
+  agentId: string,
+  deviceId: string,
+  detail?: Record<string, unknown>,
+): void {
+  const severity: AuditEventSeverity =
+    action === "remote-agent.drift_detected" ? "warn" : "info";
+  recordAuditEvent({
+    category: "remote-agent",
+    action,
+    severity,
+    actor,
+    resource: agentId,
+    detail: { deviceId, ...detail },
+  });
+}
+
+// ── SSO Events ──────────────────────────────────────────────────
+
+export function emitSsoEvent(
+  actor: AuditActor,
+  action: "sso.login" | "sso.provisioned" | "sso.failure" | "sso.group_sync",
+  detail?: Record<string, unknown>,
+): void {
+  const severity: AuditEventSeverity =
+    action === "sso.failure" ? "warn" : "info";
+  recordAuditEvent({
+    category: "sso",
+    action,
+    severity,
+    actor,
+    detail,
+  });
+}
+
+// ── Fleet Events ────────────────────────────────────────────────
+
+export function emitFleetEvent(
+  actor: AuditActor,
+  action:
+    | "fleet.policy_pushed"
+    | "fleet.tokens_rotated"
+    | "fleet.wipe_initiated"
+    | "fleet.agents_synced"
+    | "fleet.compliance_checked",
+  detail?: Record<string, unknown>,
+): void {
+  const severity: AuditEventSeverity =
+    action === "fleet.wipe_initiated" ? "critical" : "info";
+  recordAuditEvent({
+    category: "fleet",
+    action,
+    severity,
+    actor,
+    detail,
+  });
+}
+
 // ── Device Events ───────────────────────────────────────────────
 
 export function emitDeviceEvent(

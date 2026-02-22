@@ -8,7 +8,11 @@ export type AuditEventCategory =
   | "skill"
   | "sandbox"
   | "device"
-  | "system";
+  | "system"
+  | "operator"
+  | "remote-agent"
+  | "sso"
+  | "fleet";
 
 export type AuditEventSeverity = "info" | "warn" | "critical";
 

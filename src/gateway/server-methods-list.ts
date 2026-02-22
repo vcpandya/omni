@@ -101,6 +101,43 @@ const BASE_METHODS = [
   "audit.stream",
   "audit.verify",
   "audit.export",
+  // Operator management
+  "operators.list",
+  "operators.get",
+  "operators.create",
+  "operators.update",
+  "operators.delete",
+  "operators.invite",
+  "operators.redeem",
+  "operators.sessions",
+  // Remote agent fleet management
+  "remote.agents.list",
+  "remote.agents.get",
+  "remote.agents.push",
+  "remote.agents.pull",
+  "remote.agents.sync",
+  "remote.agents.diff",
+  "remote.agents.remove",
+  "remote.agents.drift",
+  // SSO
+  "sso.callback",
+  "sso.status",
+  "sso.test",
+  // Fleet management
+  "fleet.overview",
+  "fleet.compliance",
+  "fleet.policy.push",
+  "fleet.tokens.rotate",
+  "fleet.wipe",
+  "fleet.agents.sync",
+  "fleet.operations.list",
+  "fleet.operations.get",
+  // Skill trust management
+  "skills.trust.set",
+  "skills.trust.verify",
+  "skills.trust.quarantine",
+  "skills.trust.release",
+  "skills.trust.audit",
 ];
 
 export function listGatewayMethods(): string[] {

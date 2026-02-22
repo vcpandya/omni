@@ -6,6 +6,10 @@ import { isRoleAuthorizedForMethod, parseGatewayRole } from "./role-policy.js";
 import { agentHandlers } from "./server-methods/agent.js";
 import { auditTrailHandlers } from "./server-methods/audit-trail.js";
 import { agentsHandlers } from "./server-methods/agents.js";
+import { operatorHandlers } from "./server-methods/operators.js";
+import { remoteAgentHandlers } from "./server-methods/remote-agents.js";
+import { ssoHandlers } from "./server-methods/sso.js";
+import { fleetHandlers } from "./server-methods/fleet.js";
 import { browserHandlers } from "./server-methods/browser.js";
 import { channelsHandlers } from "./server-methods/channels.js";
 import { chatHandlers } from "./server-methods/chat.js";
@@ -90,6 +94,10 @@ export const coreGatewayHandlers: GatewayRequestHandlers = {
   ...agentsHandlers,
   ...browserHandlers,
   ...auditTrailHandlers,
+  ...operatorHandlers,
+  ...remoteAgentHandlers,
+  ...ssoHandlers,
+  ...fleetHandlers,
 };
 
 export async function handleGatewayRequest(
