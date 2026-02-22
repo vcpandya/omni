@@ -1,9 +1,9 @@
-# 🦞 OpenClaw — Personal AI Assistant
+# 🦞 Omni — Personal AI Assistant
 
 <p align="center">
     <picture>
         <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/openclaw/openclaw/main/docs/assets/openclaw-logo-text-dark.png">
-        <img src="https://raw.githubusercontent.com/openclaw/openclaw/main/docs/assets/openclaw-logo-text.png" alt="OpenClaw" width="500">
+        <img src="https://raw.githubusercontent.com/openclaw/openclaw/main/docs/assets/openclaw-logo-text.png" alt="Omni" width="500">
     </picture>
 </p>
 
@@ -18,7 +18,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="MIT License"></a>
 </p>
 
-**OpenClaw** is a _personal AI assistant_ you run on your own devices.
+**Omni** is a _personal AI assistant_ you run on your own devices.
 It answers you on the channels you already use (WhatsApp, Telegram, Slack, Discord, Google Chat, Signal, iMessage, Microsoft Teams, WebChat), plus extension channels like BlueBubbles, Matrix, Zalo, and Zalo Personal. It supports **enterprise AI providers** (Azure OpenAI, AWS Bedrock, Google Vertex AI) alongside direct API keys and OAuth subscriptions. It can speak and listen on macOS/iOS/Android, and can render a live Canvas you control. The Gateway is just the control plane — the product is the assistant.
 
 If you want a personal or team assistant that feels local, fast, and always-on — with enterprise-grade security and compliance — this is it.
@@ -27,6 +27,7 @@ If you want a personal or team assistant that feels local, fast, and always-on �
 
 Preferred setup: run the onboarding wizard (`openclaw onboard`) in your terminal.
 The wizard guides you step by step through setting up the gateway, workspace, channels, and skills. The CLI wizard is the recommended path and works on **macOS, Linux, and Windows (via WSL2; strongly recommended)**.
+Alternatively, use the **browser-based Web Wizard** via the [Control UI](https://docs.openclaw.ai/web) — a multi-step onboarding flow with compliance profile selection, provider setup, and real-time progress, all from your browser.
 Works with npm, pnpm, or bun.
 New install? Start here: [Getting started](https://docs.openclaw.ai/start/getting-started)
 
@@ -81,7 +82,7 @@ openclaw onboard --install-daemon
 openclaw gateway --port 18789 --verbose
 
 # Send a message
-openclaw message send --to +1234567890 --message "Hello from OpenClaw"
+openclaw message send --to +1234567890 --message "Hello from Omni"
 
 # Talk to the assistant (optionally deliver back to any connected channel: WhatsApp/Telegram/Slack/Discord/Google Chat/Signal/iMessage/BlueBubbles/Microsoft Teams/Matrix/Zalo/Zalo Personal/WebChat)
 openclaw agent --message "Ship checklist" --thinking high
@@ -120,11 +121,11 @@ Note: `pnpm openclaw ...` runs TypeScript directly (via `tsx`). `pnpm build` pro
 
 ## Security defaults (DM access)
 
-OpenClaw connects to real messaging surfaces. Treat inbound DMs as **untrusted input**.
+Omni connects to real messaging surfaces. Treat inbound DMs as **untrusted input**.
 
 Full security guide: [Security](https://docs.openclaw.ai/gateway/security)
 
-OpenClaw ships with **compliance profiles** (Zero Trust, SOC 2 Hardened, HIPAA, Standard, Development) that pre-configure security settings based on your risk posture. Run `openclaw onboard` and select your profile, or set `security.complianceProfile` in config. Coverage maps to **OWASP Top 10 for LLM Applications 2025** and **OWASP Agentic AI Top 10**.
+Omni ships with **compliance profiles** (Zero Trust, SOC 2 Hardened, HIPAA, Standard, Development) that pre-configure security settings based on your risk posture. Run `openclaw onboard` and select your profile, or set `security.complianceProfile` in config. Coverage maps to **OWASP Top 10 for LLM Applications 2025** and **OWASP Agentic AI Top 10**.
 
 Default behavior on Telegram/WhatsApp/Signal/iMessage/Microsoft Teams/Discord/Google Chat/Slack:
 
@@ -143,7 +144,7 @@ Run `openclaw doctor` to surface risky/misconfigured DM policies.
 - **[Live Canvas](https://docs.openclaw.ai/platforms/mac/canvas)** — agent-driven visual workspace with [A2UI](https://docs.openclaw.ai/platforms/mac/canvas#canvas-a2ui).
 - **[First-class tools](https://docs.openclaw.ai/tools)** — browser, canvas, nodes, cron, sessions, and Discord/Slack actions.
 - **[Companion apps](https://docs.openclaw.ai/platforms/macos)** — macOS menu bar app + iOS/Android [nodes](https://docs.openclaw.ai/nodes).
-- **[Onboarding](https://docs.openclaw.ai/start/wizard) + [skills](https://docs.openclaw.ai/tools/skills)** — wizard-driven setup with bundled/managed/workspace skills.
+- **[Onboarding](https://docs.openclaw.ai/start/wizard) + [skills](https://docs.openclaw.ai/tools/skills)** — wizard-driven setup (CLI or [browser-based Web Wizard](https://docs.openclaw.ai/web)) with bundled/managed/workspace skills.
 - **[Enterprise AI providers](https://docs.openclaw.ai/start/enterprise-providers)** — Azure OpenAI, AWS Bedrock, Google Vertex AI with wizard-guided setup.
 - **[Compliance profiles](https://docs.openclaw.ai/security/onboarding-security)** — Zero Trust, SOC 2, HIPAA, Standard, Development with OWASP coverage mapping.
 - **[Token budget](https://docs.openclaw.ai/concepts/token-budget)** — zone-based context window partitioning (system, tools, memory, history, reserve).
@@ -160,7 +161,7 @@ Run `openclaw doctor` to surface risky/misconfigured DM policies.
 ### Core platform
 
 - [Gateway WS control plane](https://docs.openclaw.ai/gateway) with sessions, presence, config, cron, webhooks, [Control UI](https://docs.openclaw.ai/web), and [Canvas host](https://docs.openclaw.ai/platforms/mac/canvas#canvas-a2ui).
-- [CLI surface](https://docs.openclaw.ai/tools/agent-send): gateway, agent, send, [wizard](https://docs.openclaw.ai/start/wizard), and [doctor](https://docs.openclaw.ai/gateway/doctor).
+- [CLI surface](https://docs.openclaw.ai/tools/agent-send): gateway, agent, send, [wizard](https://docs.openclaw.ai/start/wizard) (CLI + [Web Wizard](https://docs.openclaw.ai/web)), and [doctor](https://docs.openclaw.ai/gateway/doctor).
 - [Pi agent runtime](https://docs.openclaw.ai/concepts/agent) in RPC mode with tool streaming and block streaming.
 - [Session model](https://docs.openclaw.ai/concepts/session): `main` for direct chats, group isolation, activation modes, queue modes, reply-back. Group rules: [Groups](https://docs.openclaw.ai/concepts/groups).
 - [Media pipeline](https://docs.openclaw.ai/nodes/images): images/audio/video, transcription hooks, size caps, temp file lifecycle. Audio details: [Audio](https://docs.openclaw.ai/nodes/audio).
@@ -246,7 +247,7 @@ WhatsApp / Telegram / Slack / Discord / Google Chat / Signal / iMessage / BlueBu
 
 ## Tailscale access (Gateway dashboard)
 
-OpenClaw can auto-configure Tailscale **Serve** (tailnet-only) or **Funnel** (public) while the Gateway stays bound to loopback. Configure `gateway.tailscale.mode`:
+Omni can auto-configure Tailscale **Serve** (tailnet-only) or **Funnel** (public) while the Gateway stays bound to loopback. Configure `gateway.tailscale.mode`:
 
 - `off`: no Tailscale automation (default).
 - `serve`: tailnet-only HTTPS via `tailscale serve` (uses Tailscale identity headers by default).
@@ -254,7 +255,7 @@ OpenClaw can auto-configure Tailscale **Serve** (tailnet-only) or **Funnel** (pu
 
 Notes:
 
-- `gateway.bind` must stay `loopback` when Serve/Funnel is enabled (OpenClaw enforces this).
+- `gateway.bind` must stay `loopback` when Serve/Funnel is enabled (Omni enforces this).
 - Serve can be forced to require a password by setting `gateway.auth.mode: "password"` or `gateway.auth.allowTailscale: false`.
 - Funnel refuses to start unless `gateway.auth.mode: "password"` is set.
 - Optional: `gateway.tailscale.resetOnExit` to undo Serve/Funnel on shutdown.
@@ -320,7 +321,7 @@ The Gateway alone delivers a great experience. All apps are optional and add ext
 
 If you plan to build/run companion apps, follow the platform runbooks below.
 
-### macOS (OpenClaw.app) (optional)
+### macOS (Omni.app) (optional)
 
 - Menu bar control for the Gateway and health.
 - Voice Wake + push-to-talk overlay.
@@ -527,7 +528,7 @@ Use these when you’re past the onboarding flow and want the deeper reference.
 
 ## Molty
 
-OpenClaw was built for **Molty**, a space lobster AI assistant. 🦞
+Omni was built for **Molty**, a space lobster AI assistant. 🦞
 by Peter Steinberger and the community.
 
 - [openclaw.ai](https://openclaw.ai)
