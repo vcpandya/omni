@@ -163,7 +163,7 @@ export function renderApp(state: AppViewState) {
             </div>
             <div class="brand-text">
               <div class="brand-title">OMNI</div>
-              <div class="brand-sub">Enterprise AI Gateway</div>
+              <div class="brand-sub">OpenClaw for Enterprises</div>
             </div>
           </div>
         </div>

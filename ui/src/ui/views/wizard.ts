@@ -84,7 +84,7 @@ function renderWizardSidebar(activeIndex: number): TemplateResult {
     <aside class="wizard-sidebar">
       <div class="wizard-sidebar__brand">
         <div class="wizard-sidebar__brand-title">OMNI</div>
-        <div class="wizard-sidebar__brand-sub">Enterprise AI Gateway</div>
+        <div class="wizard-sidebar__brand-sub">OpenClaw for Enterprises</div>
       </div>
       <div class="wizard-step-list">
         ${WIZARD_STEP_LABELS.map(
@@ -128,7 +128,7 @@ function renderWizardWelcome(props: WizardProps): TemplateResult {
         <div class="wizard-welcome">
           <div class="wizard-welcome__logo">OMNI</div>
           <div class="wizard-welcome__tagline">
-            Enterprise AI Gateway — Secure, Multi-Channel, Always On
+            OpenClaw for Enterprises — Secure, Multi-Channel, Always On
           </div>
           <div class="wizard-features">
             ${features.map(
