@@ -37,6 +37,8 @@ const METHOD_SCOPE_GROUPS: Record<OperatorScope, readonly string[]> = {
     "device.pair.remove",
     "device.token.rotate",
     "device.token.revoke",
+    "device.trust.report",
+    "device.trust.policy",
     "node.rename",
   ],
   [READ_SCOPE]: [
@@ -71,6 +73,9 @@ const METHOD_SCOPE_GROUPS: Record<OperatorScope, readonly string[]> = {
     "talk.config",
     "agents.files.list",
     "agents.files.get",
+    "audit.query",
+    "audit.stream",
+    "audit.verify",
   ],
   [WRITE_SCOPE]: [
     "send",
@@ -112,6 +117,8 @@ const METHOD_SCOPE_GROUPS: Record<OperatorScope, readonly string[]> = {
     "set-heartbeats",
     "system-event",
     "agents.files.set",
+    "audit.export",
+    "device.wipe",
   ],
 };
 

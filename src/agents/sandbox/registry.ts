@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { acquireSessionWriteLock } from "../session-write-lock.js";
+import { emitSandboxEvent } from "../../security/audit-trail-emitters.js";
 import {
   SANDBOX_BROWSER_REGISTRY_PATH,
   SANDBOX_REGISTRY_PATH,
@@ -165,6 +166,12 @@ export async function updateRegistry(entry: SandboxRegistryEntry) {
   await withRegistryMutation<SandboxRegistryEntry>(SANDBOX_REGISTRY_PATH, (entries) =>
     upsertEntry(entries, entry),
   );
+  emitSandboxEvent(
+    { actorId: "system" },
+    "sandbox.created",
+    entry.containerName,
+    { sessionKey: entry.sessionKey, image: entry.image },
+  );
 }
 
 export async function removeRegistryEntry(containerName: string) {
@@ -175,6 +182,7 @@ export async function removeRegistryEntry(containerName: string) {
     }
     return next;
   });
+  emitSandboxEvent({ actorId: "system" }, "sandbox.destroyed", containerName);
 }
 
 export async function readBrowserRegistry(): Promise<SandboxBrowserRegistry> {

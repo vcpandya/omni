@@ -45,6 +45,7 @@ const BASE_METHODS = [
   "skills.bins",
   "skills.install",
   "skills.update",
+  "skills.trust",
   "update.run",
   "voicewake.get",
   "voicewake.set",
@@ -68,6 +69,9 @@ const BASE_METHODS = [
   "device.pair.remove",
   "device.token.rotate",
   "device.token.revoke",
+  "device.trust.report",
+  "device.trust.policy",
+  "device.wipe",
   "node.rename",
   "node.list",
   "node.describe",
@@ -92,6 +96,11 @@ const BASE_METHODS = [
   "chat.history",
   "chat.abort",
   "chat.send",
+  // Audit trail methods
+  "audit.query",
+  "audit.stream",
+  "audit.verify",
+  "audit.export",
 ];
 
 export function listGatewayMethods(): string[] {
@@ -118,5 +127,6 @@ export const GATEWAY_EVENTS = [
   "voicewake.changed",
   "exec.approval.requested",
   "exec.approval.resolved",
+  "audit.event",
   GATEWAY_EVENT_UPDATE_AVAILABLE,
 ];

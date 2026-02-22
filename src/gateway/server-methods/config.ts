@@ -42,6 +42,7 @@ import {
   validateConfigSchemaParams,
   validateConfigSetParams,
 } from "../protocol/index.js";
+import { emitConfigEvent } from "../../security/audit-trail-emitters.js";
 import { resolveBaseHashParam } from "./base-hash.js";
 import { parseRestartRequestParams } from "./restart-request.js";
 import type { GatewayRequestHandlers, RespondFn } from "./types.js";
@@ -285,6 +286,11 @@ export const configHandlers: GatewayRequestHandlers = {
     if (!assertValidParams(params, validateConfigPatchParams, "config.patch", respond)) {
       return;
     }
+    const configAuditActor = {
+      actorId: resolveControlPlaneActor(client).actor ?? "unknown",
+      deviceId: resolveControlPlaneActor(client).deviceId,
+      clientIp: resolveControlPlaneActor(client).clientIp,
+    };
     const { snapshot, writeOptions } = await readConfigFileSnapshotForWrite();
     if (!requireConfigBaseHash(params, snapshot, respond)) {
       return;
@@ -360,6 +366,7 @@ export const configHandlers: GatewayRequestHandlers = {
     context?.logGateway?.info(
       `config.patch write ${formatControlPlaneActor(actor)} changedPaths=${summarizeChangedPaths(changedPaths)} restartReason=config.patch`,
     );
+    emitConfigEvent(configAuditActor, "config.patch", changedPaths);
     await writeConfigFile(validated.config, writeOptions);
 
     const { sessionKey, note, restartDelayMs, deliveryContext, threadId } =
@@ -419,6 +426,11 @@ export const configHandlers: GatewayRequestHandlers = {
     const actor = resolveControlPlaneActor(client);
     context?.logGateway?.info(
       `config.apply write ${formatControlPlaneActor(actor)} changedPaths=${summarizeChangedPaths(changedPaths)} restartReason=config.apply`,
+    );
+    emitConfigEvent(
+      { actorId: actor.actor ?? "unknown", deviceId: actor.deviceId, clientIp: actor.clientIp },
+      "config.apply",
+      changedPaths,
     );
     await writeConfigFile(parsed.config, writeOptions);
 

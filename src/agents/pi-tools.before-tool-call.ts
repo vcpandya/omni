@@ -3,6 +3,8 @@ import type { SessionState } from "../logging/diagnostic-session-state.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import { getGlobalHookRunner } from "../plugins/hook-runner-global.js";
 import { isPlainObject } from "../utils.js";
+import { emitToolEvent } from "../security/audit-trail-emitters.js";
+import type { LlmAuditHookResult } from "../security/llm-audit.js";
 import { normalizeToolName } from "./tool-policy.js";
 import type { AnyAgentTool } from "./tools/common.js";
 
@@ -20,6 +22,40 @@ const adjustedParamsByToolCallId = new Map<string, unknown>();
 const MAX_TRACKED_ADJUSTED_PARAMS = 1024;
 const LOOP_WARNING_BUCKET_SIZE = 10;
 const MAX_LOOP_WARNING_KEYS = 256;
+
+// ── Lazy LLM Audit Hook ─────────────────────────────────────────
+
+type LlmAuditHookFn = (params: {
+  toolName: string;
+  args: unknown;
+  sessionKey?: string;
+  agentId?: string;
+}) => Promise<LlmAuditHookResult>;
+
+let llmAuditHook: LlmAuditHookFn | null | undefined;
+
+async function getLlmAuditHook(): Promise<LlmAuditHookFn | null> {
+  if (llmAuditHook !== undefined) return llmAuditHook;
+  try {
+    const { loadConfig } = await import("../config/config.js");
+    const cfg = await loadConfig();
+    const securityConfig = (cfg as Record<string, unknown>).security as
+      | Record<string, unknown>
+      | undefined;
+    const llmAuditConfig = securityConfig?.llmAudit as
+      | import("../security/llm-audit.types.js").LlmAuditConfig
+      | undefined;
+    if (llmAuditConfig && llmAuditConfig.mode && llmAuditConfig.mode !== "off") {
+      const { createLlmAuditHook } = await import("../security/llm-audit.js");
+      llmAuditHook = createLlmAuditHook(llmAuditConfig);
+    } else {
+      llmAuditHook = null;
+    }
+  } catch {
+    llmAuditHook = null;
+  }
+  return llmAuditHook;
+}
 
 function shouldEmitLoopWarning(state: SessionState, warningKey: string, count: number): boolean {
   if (!state.toolLoopWarningBuckets) {
@@ -94,6 +130,12 @@ export async function runBeforeToolCallHook(args: {
 
     if (loopResult.stuck) {
       if (loopResult.level === "critical") {
+        emitToolEvent(
+          { actorId: args.ctx?.agentId ?? "agent", connId: args.ctx?.sessionKey },
+          "tool.loop_detected",
+          toolName,
+          { level: "critical", count: loopResult.count, detector: loopResult.detector },
+        );
         log.error(`Blocking ${toolName} due to critical loop: ${loopResult.message}`);
         logToolLoopAction({
           sessionKey: args.ctx.sessionKey,
@@ -132,6 +174,24 @@ export async function runBeforeToolCallHook(args: {
     recordToolCall(sessionState, toolName, params, args.toolCallId, args.ctx.loopDetection);
   }
 
+  // ── LLM Audit Hook (runs before plugin hooks when enabled) ──
+  try {
+    const auditHook = await getLlmAuditHook();
+    if (auditHook) {
+      const auditResult = await auditHook({
+        toolName,
+        args: params,
+        sessionKey: args.ctx?.sessionKey,
+        agentId: args.ctx?.agentId,
+      });
+      if (auditResult.blocked) {
+        return { blocked: true, reason: auditResult.reason };
+      }
+    }
+  } catch (err) {
+    log.warn(`LLM audit hook failed: tool=${toolName} error=${String(err)}`);
+  }
+
   const hookRunner = getGlobalHookRunner();
   if (!hookRunner?.hasHooks("before_tool_call")) {
     return { blocked: false, params: args.params };
@@ -152,6 +212,12 @@ export async function runBeforeToolCallHook(args: {
     );
 
     if (hookResult?.block) {
+      emitToolEvent(
+        { actorId: args.ctx?.agentId ?? "agent", connId: args.ctx?.sessionKey },
+        "tool.blocked",
+        toolName,
+        { reason: hookResult.blockReason },
+      );
       return {
         blocked: true,
         reason: hookResult.blockReason || "Tool call blocked by plugin hook",
@@ -243,9 +309,14 @@ export function consumeAdjustedParamsForToolCall(toolCallId: string): unknown {
   return params;
 }
 
+export function resetLlmAuditHookCache(): void {
+  llmAuditHook = undefined;
+}
+
 export const __testing = {
   BEFORE_TOOL_CALL_WRAPPED,
   adjustedParamsByToolCallId,
   runBeforeToolCallHook,
   isPlainObject,
+  resetLlmAuditHookCache,
 };

@@ -21,6 +21,8 @@ import {
   validateSkillsStatusParams,
   validateSkillsUpdateParams,
 } from "../protocol/index.js";
+import { emitSkillEvent } from "../../security/audit-trail-emitters.js";
+import { getSkillTrustStatus } from "../../security/skill-trust.js";
 import type { GatewayRequestHandlers } from "./types.js";
 
 function collectSkillBins(entries: SkillEntry[]): string[] {
@@ -137,6 +139,9 @@ export const skillsHandlers: GatewayRequestHandlers = {
       timeoutMs: p.timeoutMs,
       config: cfg,
     });
+    if (result.ok) {
+      emitSkillEvent({ actorId: "system" }, "skill.installed", p.name, { installId: p.installId });
+    }
     respond(
       result.ok,
       result,
@@ -199,6 +204,13 @@ export const skillsHandlers: GatewayRequestHandlers = {
       skills,
     };
     await writeConfigFile(nextConfig);
+    emitSkillEvent({ actorId: "system" }, "skill.updated", p.skillKey, {
+      enabled: p.enabled,
+    });
     respond(true, { ok: true, skillKey: p.skillKey, config: current }, undefined);
+  },
+  "skills.trust": ({ respond }) => {
+    const entries = getSkillTrustStatus();
+    respond(true, { entries }, undefined);
   },
 };

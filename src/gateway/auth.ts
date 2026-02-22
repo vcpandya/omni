@@ -6,6 +6,8 @@ import type {
 } from "../config/config.js";
 import { readTailscaleWhoisIdentity, type TailscaleWhoisIdentity } from "../infra/tailscale.js";
 import { safeEqualSecret } from "../security/secret-equal.js";
+import { emitAuthEvent } from "../security/audit-trail-emitters.js";
+import type { AuditActor } from "../security/audit-trail.types.js";
 import {
   AUTH_RATE_LIMIT_SCOPE_SHARED_SECRET,
   type AuthRateLimiter,
@@ -344,6 +346,11 @@ function authorizeTrustedProxy(params: {
 
   const user = userHeaderValue.trim();
 
+  // Bound user header length to prevent abuse
+  if (user.length > 512) {
+    return { reason: "trusted_proxy_user_invalid" };
+  }
+
   const allowUsers = trustedProxyConfig.allowUsers ?? [];
   if (allowUsers.length > 0 && !allowUsers.includes(user)) {
     return { reason: "trusted_proxy_user_not_allowed" };
@@ -369,12 +376,35 @@ export async function authorizeGatewayConnect(
     params.allowRealIpFallback === true,
   );
 
+  const auditActor: AuditActor = {
+    actorId: params.clientIp ?? req?.socket?.remoteAddress ?? "unknown",
+    clientIp: params.clientIp ?? req?.socket?.remoteAddress,
+  };
+
   if (auth.mode === "trusted-proxy") {
     if (!auth.trustedProxy) {
-      return { ok: false, reason: "trusted_proxy_config_missing" };
+      emitAuthEvent(auditActor, "auth.failure", { reason: "trusted_proxy_config_missing" });
+      return { ok: false, reason: "authentication_failed" };
     }
     if (!trustedProxies || trustedProxies.length === 0) {
-      return { ok: false, reason: "trusted_proxy_no_proxies_configured" };
+      emitAuthEvent(auditActor, "auth.failure", { reason: "trusted_proxy_no_proxies_configured" });
+      return { ok: false, reason: "authentication_failed" };
+    }
+
+    const limiter = params.rateLimiter;
+    const ip =
+      params.clientIp ??
+      resolveRequestClientIp(req, trustedProxies, params.allowRealIpFallback === true) ??
+      req?.socket?.remoteAddress;
+    const rateLimitScope = params.rateLimitScope ?? AUTH_RATE_LIMIT_SCOPE_SHARED_SECRET;
+
+    // Rate limit trusted-proxy attempts
+    if (limiter) {
+      const rlCheck: RateLimitCheckResult = limiter.check(ip, rateLimitScope);
+      if (!rlCheck.allowed) {
+        emitAuthEvent(auditActor, "auth.rate_limited", { retryAfterMs: rlCheck.retryAfterMs });
+        return { ok: false, reason: "rate_limited", rateLimited: true, retryAfterMs: rlCheck.retryAfterMs };
+      }
     }
 
     const result = authorizeTrustedProxy({
@@ -384,9 +414,14 @@ export async function authorizeGatewayConnect(
     });
 
     if ("user" in result) {
+      limiter?.reset(ip, rateLimitScope);
+      emitAuthEvent({ ...auditActor, actorId: result.user }, "auth.success", { method: "trusted-proxy" });
       return { ok: true, method: "trusted-proxy", user: result.user };
     }
-    return { ok: false, reason: result.reason };
+    // Record failure for rate limiting; emit detailed reason to audit (not to client)
+    limiter?.recordFailure(ip, rateLimitScope);
+    emitAuthEvent(auditActor, "auth.failure", { reason: result.reason });
+    return { ok: false, reason: "authentication_failed" };
   }
 
   if (auth.mode === "none") {
@@ -402,6 +437,7 @@ export async function authorizeGatewayConnect(
   if (limiter) {
     const rlCheck: RateLimitCheckResult = limiter.check(ip, rateLimitScope);
     if (!rlCheck.allowed) {
+      emitAuthEvent(auditActor, "auth.rate_limited", { retryAfterMs: rlCheck.retryAfterMs });
       return {
         ok: false,
         reason: "rate_limited",
@@ -418,6 +454,7 @@ export async function authorizeGatewayConnect(
     });
     if (tailscaleCheck.ok) {
       limiter?.reset(ip, rateLimitScope);
+      emitAuthEvent({ ...auditActor, actorId: tailscaleCheck.user.login }, "auth.success", { method: "tailscale" });
       return {
         ok: true,
         method: "tailscale",
@@ -436,9 +473,11 @@ export async function authorizeGatewayConnect(
     }
     if (!safeEqualSecret(connectAuth.token, auth.token)) {
       limiter?.recordFailure(ip, rateLimitScope);
+      emitAuthEvent(auditActor, "auth.failure", { reason: "token_mismatch" });
       return { ok: false, reason: "token_mismatch" };
     }
     limiter?.reset(ip, rateLimitScope);
+    emitAuthEvent(auditActor, "auth.success", { method: "token" });
     return { ok: true, method: "token" };
   }
 
@@ -453,9 +492,11 @@ export async function authorizeGatewayConnect(
     }
     if (!safeEqualSecret(password, auth.password)) {
       limiter?.recordFailure(ip, rateLimitScope);
+      emitAuthEvent(auditActor, "auth.failure", { reason: "password_mismatch" });
       return { ok: false, reason: "password_mismatch" };
     }
     limiter?.reset(ip, rateLimitScope);
+    emitAuthEvent(auditActor, "auth.success", { method: "password" });
     return { ok: true, method: "password" };
   }
 

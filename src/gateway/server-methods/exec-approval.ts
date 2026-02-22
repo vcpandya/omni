@@ -11,6 +11,7 @@ import {
   validateExecApprovalRequestParams,
   validateExecApprovalResolveParams,
 } from "../protocol/index.js";
+import { emitApprovalEvent } from "../../security/audit-trail-emitters.js";
 import type { GatewayRequestHandlers } from "./types.js";
 
 export function createExecApprovalHandlers(
@@ -86,6 +87,18 @@ export function createExecApprovalHandlers(
         );
         return;
       }
+      emitApprovalEvent(
+        {
+          actorId: client?.connect?.client?.id ?? "unknown",
+          connId: client?.connId,
+          deviceId: client?.connect?.device?.id,
+          clientIp: client?.clientIp,
+        },
+        "approval.requested",
+        record.id,
+        p.command,
+        { agentId: p.agentId, host: p.host },
+      );
       context.broadcast(
         "exec.approval.requested",
         {
@@ -192,6 +205,18 @@ export function createExecApprovalHandlers(
         respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, "unknown approval id"));
         return;
       }
+      emitApprovalEvent(
+        {
+          actorId: resolvedBy ?? "unknown",
+          connId: client?.connId,
+          deviceId: client?.connect?.device?.id,
+          clientIp: client?.clientIp,
+        },
+        "approval.resolved",
+        p.id,
+        "",
+        { decision },
+      );
       context.broadcast(
         "exec.approval.resolved",
         { id: p.id, decision, resolvedBy, ts: Date.now() },

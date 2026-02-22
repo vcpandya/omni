@@ -19,6 +19,13 @@ import {
   validateDeviceTokenRevokeParams,
   validateDeviceTokenRotateParams,
 } from "../protocol/index.js";
+import { emitDeviceEvent } from "../../security/audit-trail-emitters.js";
+import {
+  evaluateDeviceCompliance,
+  enforceDeviceTrustPolicy,
+  initiateRemoteWipe,
+} from "../../security/device-trust.js";
+import type { DeviceTrustPolicy } from "../../security/device-trust.types.js";
 import type { GatewayRequestHandlers } from "./types.js";
 
 function redactPairedDevice(
@@ -76,6 +83,9 @@ export const deviceHandlers: GatewayRequestHandlers = {
       respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, "unknown requestId"));
       return;
     }
+    emitDeviceEvent({ actorId: "operator" }, "device.paired", approved.device.deviceId, {
+      role: approved.device.role,
+    });
     context.logGateway.info(
       `device pairing approved device=${approved.device.deviceId} role=${approved.device.role ?? "unknown"}`,
     );
@@ -111,6 +121,7 @@ export const deviceHandlers: GatewayRequestHandlers = {
       respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, "unknown requestId"));
       return;
     }
+    emitDeviceEvent({ actorId: "operator" }, "device.rejected", rejected.deviceId);
     context.broadcast(
       "device.pair.resolved",
       {
@@ -170,6 +181,9 @@ export const deviceHandlers: GatewayRequestHandlers = {
       respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, "unknown deviceId/role"));
       return;
     }
+    emitDeviceEvent({ actorId: "operator" }, "device.token_rotated", deviceId, {
+      role: entry.role,
+    });
     context.logGateway.info(
       `device token rotated device=${deviceId} role=${entry.role} scopes=${entry.scopes.join(",")}`,
     );
@@ -205,11 +219,56 @@ export const deviceHandlers: GatewayRequestHandlers = {
       respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, "unknown deviceId/role"));
       return;
     }
+    emitDeviceEvent({ actorId: "operator" }, "device.revoked", deviceId, { role: entry.role });
     context.logGateway.info(`device token revoked device=${deviceId} role=${entry.role}`);
     respond(
       true,
       { deviceId, role: entry.role, revokedAtMs: entry.revokedAtMs ?? Date.now() },
       undefined,
     );
+  },
+  "device.trust.report": async ({ params, respond }) => {
+    const p = params as {
+      deviceId: string;
+      metadata?: {
+        osVersion?: string;
+        encryptionEnabled?: boolean;
+        firewallEnabled?: boolean;
+        lastUpdatedMs?: number;
+        screenLockEnabled?: boolean;
+        biometricsEnabled?: boolean;
+        mdmEnrolled?: boolean;
+      };
+    };
+    if (!p.deviceId) {
+      respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, "deviceId is required"));
+      return;
+    }
+    const report = evaluateDeviceCompliance(p.deviceId, p.metadata ?? {});
+    respond(true, report, undefined);
+  },
+  "device.trust.policy": async ({ params, respond }) => {
+    const p = params as {
+      deviceId: string;
+      metadata?: Record<string, unknown>;
+      policy?: DeviceTrustPolicy;
+    };
+    if (!p.deviceId || !p.policy) {
+      respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, "deviceId and policy are required"));
+      return;
+    }
+    const report = evaluateDeviceCompliance(p.deviceId, (p.metadata ?? {}) as Parameters<typeof evaluateDeviceCompliance>[1]);
+    const result = enforceDeviceTrustPolicy(report, p.policy);
+    respond(true, { ...report, enforcement: result }, undefined);
+  },
+  "device.wipe": async ({ params, respond, context }) => {
+    const p = params as { deviceId: string };
+    if (!p.deviceId) {
+      respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, "deviceId is required"));
+      return;
+    }
+    const result = initiateRemoteWipe(p.deviceId, { actorId: "operator" });
+    context.logGateway.info(`device remote wipe initiated device=${p.deviceId}`);
+    respond(true, result, undefined);
   },
 };

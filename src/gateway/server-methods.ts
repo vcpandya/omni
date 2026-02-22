@@ -4,6 +4,7 @@ import { ADMIN_SCOPE, authorizeOperatorScopesForMethod } from "./method-scopes.j
 import { ErrorCodes, errorShape } from "./protocol/index.js";
 import { isRoleAuthorizedForMethod, parseGatewayRole } from "./role-policy.js";
 import { agentHandlers } from "./server-methods/agent.js";
+import { auditTrailHandlers } from "./server-methods/audit-trail.js";
 import { agentsHandlers } from "./server-methods/agents.js";
 import { browserHandlers } from "./server-methods/browser.js";
 import { channelsHandlers } from "./server-methods/channels.js";
@@ -88,6 +89,7 @@ export const coreGatewayHandlers: GatewayRequestHandlers = {
   ...agentHandlers,
   ...agentsHandlers,
   ...browserHandlers,
+  ...auditTrailHandlers,
 };
 
 export async function handleGatewayRequest(

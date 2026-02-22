@@ -1,4 +1,5 @@
 import type { OpenClawConfig } from "../../config/config.js";
+import { SECURE_SANDBOX_DEFAULTS } from "../../security/sandbox-defaults.js";
 import { resolveAgentConfig } from "../agent-scope.js";
 import {
   DEFAULT_SANDBOX_BROWSER_AUTOSTART_TIMEOUT_MS,
@@ -85,12 +86,12 @@ export function resolveSandboxDockerConfig(params: {
     capDrop: agentDocker?.capDrop ?? globalDocker?.capDrop ?? ["ALL"],
     env,
     setupCommand: agentDocker?.setupCommand ?? globalDocker?.setupCommand,
-    pidsLimit: agentDocker?.pidsLimit ?? globalDocker?.pidsLimit,
-    memory: agentDocker?.memory ?? globalDocker?.memory,
+    pidsLimit: agentDocker?.pidsLimit ?? globalDocker?.pidsLimit ?? SECURE_SANDBOX_DEFAULTS.pidsLimit,
+    memory: agentDocker?.memory ?? globalDocker?.memory ?? SECURE_SANDBOX_DEFAULTS.memory,
     memorySwap: agentDocker?.memorySwap ?? globalDocker?.memorySwap,
     cpus: agentDocker?.cpus ?? globalDocker?.cpus,
     ulimits,
-    seccompProfile: agentDocker?.seccompProfile ?? globalDocker?.seccompProfile,
+    seccompProfile: agentDocker?.seccompProfile ?? globalDocker?.seccompProfile ?? SECURE_SANDBOX_DEFAULTS.seccompProfile,
     apparmorProfile: agentDocker?.apparmorProfile ?? globalDocker?.apparmorProfile,
     dns: agentDocker?.dns ?? globalDocker?.dns,
     extraHosts: agentDocker?.extraHosts ?? globalDocker?.extraHosts,

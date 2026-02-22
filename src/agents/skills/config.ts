@@ -1,4 +1,5 @@
 import type { OpenClawConfig, SkillConfig } from "../../config/config.js";
+import { verifySkillIntegrity } from "../../security/skill-trust.js";
 import {
   evaluateRuntimeRequires,
   hasBinary,
@@ -84,6 +85,13 @@ export function shouldIncludeSkill(params: {
   }
   if (!isBundledSkillAllowed(entry, allowBundled)) {
     return false;
+  }
+  // Check if skill is quarantined in trust manifest
+  {
+    const integrity = verifySkillIntegrity({ skillKey, dirPath: "." });
+    if (!integrity.ok && integrity.reason === "quarantined") {
+      return false;
+    }
   }
   if (
     osList.length > 0 &&
