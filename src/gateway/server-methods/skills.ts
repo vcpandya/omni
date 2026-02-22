@@ -22,7 +22,12 @@ import {
   validateSkillsUpdateParams,
 } from "../protocol/index.js";
 import { emitSkillEvent } from "../../security/audit-trail-emitters.js";
-import { getSkillTrustStatus } from "../../security/skill-trust.js";
+import {
+  getSkillTrustStatus,
+  verifySkillIntegrity,
+  quarantineSkill,
+  registerSkillTrust,
+} from "../../security/skill-trust.js";
 import type { GatewayRequestHandlers } from "./types.js";
 
 function collectSkillBins(entries: SkillEntry[]): string[] {
@@ -212,5 +217,85 @@ export const skillsHandlers: GatewayRequestHandlers = {
   "skills.trust": ({ respond }) => {
     const entries = getSkillTrustStatus();
     respond(true, { entries }, undefined);
+  },
+
+  "skills.trust.set": ({ params, respond, context }) => {
+    const p = params as { skillKey?: string; dirPath?: string; source?: string };
+    if (!p.skillKey || !p.dirPath) {
+      respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, "skillKey and dirPath are required"));
+      return;
+    }
+    const entry = registerSkillTrust({
+      skillKey: p.skillKey,
+      dirPath: p.dirPath,
+      source: p.source ?? "local",
+    });
+    emitSkillEvent({ actorId: "operator" }, "skill.updated", p.skillKey, {
+      trustLevel: entry.trustLevel,
+    });
+    context.logGateway.info(`skill trust set skill=${p.skillKey} level=${entry.trustLevel}`);
+    respond(true, { entry }, undefined);
+  },
+
+  "skills.trust.verify": ({ params, respond }) => {
+    const p = params as { skillKey?: string; dirPath?: string };
+    if (!p.skillKey || !p.dirPath) {
+      respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, "skillKey and dirPath are required"));
+      return;
+    }
+    const result = verifySkillIntegrity({ skillKey: p.skillKey, dirPath: p.dirPath });
+    respond(true, result, undefined);
+  },
+
+  "skills.trust.quarantine": ({ params, respond, context }) => {
+    const p = params as { skillKey?: string; reason?: string };
+    if (!p.skillKey) {
+      respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, "skillKey is required"));
+      return;
+    }
+    const ok = quarantineSkill({
+      skillKey: p.skillKey,
+      reason: p.reason ?? "Manual quarantine by operator",
+    });
+    if (!ok) {
+      respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, "skill not found in trust manifest"));
+      return;
+    }
+    emitSkillEvent({ actorId: "operator" }, "skill.quarantined", p.skillKey, {
+      reason: p.reason,
+    });
+    context.logGateway.info(`skill quarantined skill=${p.skillKey}`);
+    respond(true, { quarantined: true, skillKey: p.skillKey }, undefined);
+  },
+
+  "skills.trust.release": ({ params, respond, context }) => {
+    const p = params as { skillKey?: string; dirPath?: string; source?: string };
+    if (!p.skillKey || !p.dirPath) {
+      respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, "skillKey and dirPath are required"));
+      return;
+    }
+    // Re-register to release from quarantine (recomputes hash + clears quarantine)
+    const entry = registerSkillTrust({
+      skillKey: p.skillKey,
+      dirPath: p.dirPath,
+      source: p.source ?? "local",
+    });
+    context.logGateway.info(`skill released from quarantine skill=${p.skillKey}`);
+    respond(true, { released: true, entry }, undefined);
+  },
+
+  "skills.trust.audit": ({ params, respond }) => {
+    const p = params as { skillKey?: string };
+    if (!p.skillKey) {
+      respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, "skillKey is required"));
+      return;
+    }
+    const entries = getSkillTrustStatus();
+    const entry = entries[p.skillKey];
+    if (!entry) {
+      respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, "skill not found in trust manifest"));
+      return;
+    }
+    respond(true, { skillKey: p.skillKey, entry }, undefined);
   },
 };
