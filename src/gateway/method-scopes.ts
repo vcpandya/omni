@@ -96,8 +96,16 @@ const METHOD_SCOPE_GROUPS: Record<OperatorScope, readonly string[]> = {
     "fleet.operations.list",
     "fleet.operations.get",
     // Skill trust read
+    "skills.trust",
     "skills.trust.verify",
     "skills.trust.audit",
+    // Code intelligence read
+    "code-intel.status",
+    "code-intel.query",
+    "code-intel.impact",
+    "code-intel.drift",
+    // PageIndex read
+    "code-intel.pageindex.status",
   ],
   [WRITE_SCOPE]: [
     "send",
@@ -162,6 +170,10 @@ const METHOD_SCOPE_GROUPS: Record<OperatorScope, readonly string[]> = {
     "skills.trust.set",
     "skills.trust.quarantine",
     "skills.trust.release",
+    // Code intelligence admin
+    "code-intel.index",
+    // PageIndex admin
+    "code-intel.pageindex.index",
   ],
 };
 
@@ -249,5 +261,14 @@ export function isGatewayMethodClassified(method: string): boolean {
   if (isNodeRoleMethod(method)) {
     return true;
   }
+  // Public-token methods (invite redeem, SSO callback) validate their own tokens
+  // and bypass operator scopes — they are classified by design, not unclassified.
+  if (PUBLIC_TOKEN_METHODS.has(method)) {
+    return true;
+  }
   return resolveRequiredOperatorScopeForMethod(method) !== undefined;
+}
+
+export function isPublicTokenMethod(method: string): boolean {
+  return PUBLIC_TOKEN_METHODS.has(method);
 }
