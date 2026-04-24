@@ -1,6 +1,6 @@
-import { mkdtempSync, readFileSync, writeFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { mkdtempSync, readFileSync, writeFileSync, existsSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, it, expect, beforeEach } from "vitest";
 import {
   initAuditTrail,
@@ -12,6 +12,7 @@ import {
   resetAuditTrail,
 } from "./audit-trail.js";
 import type { AuditActor, AuditEvent } from "./audit-trail.types.js";
+import { createTraceContext, withTraceContext } from "./trace-context.js";
 
 function makeTempDir(): string {
   return mkdtempSync(join(tmpdir(), "audit-trail-test-"));
@@ -58,7 +59,9 @@ describe("audit-trail", () => {
         resource: "exec",
       });
 
-      const result = await verifyAuditTrailIntegrity({ filePath: join(tempDir, "audit-trail.jsonl") });
+      const result = await verifyAuditTrailIntegrity({
+        filePath: join(tempDir, "audit-trail.jsonl"),
+      });
       expect(result.ok).toBe(true);
       expect(result.totalEvents).toBe(3);
       expect(result.errors).toHaveLength(0);
@@ -259,6 +262,44 @@ describe("audit-trail", () => {
       expect(result.ok).toBe(true);
       expect(result.totalEvents).toBe(3);
     });
+
+    // Regression: the large-file (> 8 KB tail-read) recovery path previously used
+    // require("node:fs") inside an ESM module, which throws ReferenceError at
+    // runtime. This test forces the tail-read branch by writing > 8 KB of events
+    // before re-init, ensuring the statically-imported fs APIs are used.
+    it("recovers from a >8KB audit file without ESM require errors", async () => {
+      initAuditTrail(tempDir);
+      // Each event is ~250 bytes with our detail payload; write ~50 to clear 8 KB.
+      const filler = "x".repeat(120);
+      for (let i = 0; i < 60; i++) {
+        recordAuditEvent({
+          category: "auth",
+          action: `a${i}`,
+          severity: "info",
+          actor: testActor,
+          detail: { filler },
+        });
+      }
+      const tailSize = statSync(join(tempDir, "audit-trail.jsonl")).size;
+      expect(tailSize).toBeGreaterThan(8192);
+
+      // Re-init — exercises the large-file tail-read branch.
+      resetAuditTrail();
+      expect(() => initAuditTrail(tempDir)).not.toThrow();
+
+      const cont = recordAuditEvent({
+        category: "auth",
+        action: "post-recover",
+        severity: "info",
+        actor: testActor,
+      });
+      expect(cont.seq).toBe(61);
+
+      const result = await verifyAuditTrailIntegrity({
+        filePath: join(tempDir, "audit-trail.jsonl"),
+      });
+      expect(result.ok).toBe(true);
+    });
   });
 
   describe("export", () => {
@@ -316,6 +357,55 @@ describe("audit-trail", () => {
       recordAuditEvent({ category: "auth", action: "a2", severity: "info", actor: testActor });
 
       expect(received).toHaveLength(1);
+    });
+  });
+
+  describe("trace context correlation", () => {
+    it("stamps events with the ambient trace context", async () => {
+      initAuditTrail(tempDir);
+      const ctx = createTraceContext();
+
+      withTraceContext(ctx, () => {
+        recordAuditEvent({
+          category: "auth",
+          action: "auth.success",
+          severity: "info",
+          actor: testActor,
+        });
+      });
+
+      const result = await queryAuditTrail({ traceId: ctx.traceId });
+      expect(result.events).toHaveLength(1);
+      expect(result.events[0]!.trace?.traceId).toBe(ctx.traceId);
+      expect(result.events[0]!.trace?.spanId).toBe(ctx.spanId);
+    });
+
+    it("leaves events without trace when no context is active", async () => {
+      initAuditTrail(tempDir);
+      recordAuditEvent({
+        category: "auth",
+        action: "auth.success",
+        severity: "info",
+        actor: testActor,
+      });
+      const result = await queryAuditTrail({ category: "auth" });
+      expect(result.events[0]!.trace).toBeUndefined();
+    });
+
+    it("preserves hash chain integrity with trace fields present", async () => {
+      initAuditTrail(tempDir);
+      const ctx = createTraceContext();
+
+      withTraceContext(ctx, () => {
+        recordAuditEvent({ category: "auth", action: "a", severity: "info", actor: testActor });
+        recordAuditEvent({ category: "auth", action: "b", severity: "info", actor: testActor });
+      });
+
+      const result = await verifyAuditTrailIntegrity({
+        filePath: join(tempDir, "audit-trail.jsonl"),
+      });
+      expect(result.ok).toBe(true);
+      expect(result.totalEvents).toBe(2);
     });
   });
 });

@@ -3,19 +3,22 @@
 import { createHash, createHmac, randomBytes } from "node:crypto";
 import {
   appendFileSync,
+  closeSync,
+  createReadStream,
   existsSync,
   mkdirSync,
+  openSync,
   readFileSync,
-  renameSync,
+  readSync,
   readdirSync,
+  renameSync,
   statSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { createReadStream } from "node:fs";
-import { createInterface } from "node:readline";
-import { join, dirname } from "node:path";
 import { homedir } from "node:os";
+import { join, dirname } from "node:path";
+import { createInterface } from "node:readline";
 import type {
   AuditEvent,
   AuditEventCategory,
@@ -26,6 +29,7 @@ import type {
   AuditTrailExportFormat,
   AuditTrailConfig,
 } from "./audit-trail.types.js";
+import { getCurrentTraceContext, type TraceContext } from "./trace-context.js";
 
 // ── Constants ───────────────────────────────────────────────────
 
@@ -54,7 +58,10 @@ const listeners: AuditEventListener[] = [];
 
 // ── Hash Chain ──────────────────────────────────────────────────
 
-function computeEventHash(previousHash: string, eventWithoutHash: Omit<AuditEvent, "hash">): string {
+function computeEventHash(
+  previousHash: string,
+  eventWithoutHash: Omit<AuditEvent, "hash">,
+): string {
   const payload = previousHash + JSON.stringify(eventWithoutHash);
   // Use HMAC-SHA256 when key is available (prevents tampering even with file access)
   if (hmacKey.length > 0) {
@@ -71,9 +78,7 @@ export function initAuditTrail(stateDir?: string, cfg?: AuditTrailConfig): void 
   auditFilePath = join(auditDir, AUDIT_FILE_NAME);
 
   // Build O(1) category lookup
-  enabledCategories = config.categories?.length
-    ? new Set(config.categories)
-    : null;
+  enabledCategories = config.categories?.length ? new Set(config.categories) : null;
 
   if (!existsSync(auditDir)) {
     mkdirSync(auditDir, { recursive: true, mode: 0o700 });
@@ -102,12 +107,17 @@ export function initAuditTrail(stateDir?: string, cfg?: AuditTrailConfig): void 
         // Small file — read entirely
         recoverFromContent(readFileSync(auditFilePath, "utf-8"));
       } else {
-        // Large file — read only the last chunk to find the final event
-        const fd = require("node:fs").openSync(auditFilePath, "r");
-        const buf = Buffer.alloc(TAIL_BYTES);
-        require("node:fs").readSync(fd, buf, 0, TAIL_BYTES, stat.size - TAIL_BYTES);
-        require("node:fs").closeSync(fd);
-        recoverFromContent(buf.toString("utf-8"));
+        // Large file — read only the last chunk to find the final event.
+        // Uses statically-imported fs APIs (required since this module is ESM;
+        // `require()` would throw ReferenceError at runtime).
+        const fd = openSync(auditFilePath, "r");
+        try {
+          const buf = Buffer.alloc(TAIL_BYTES);
+          readSync(fd, buf, 0, TAIL_BYTES, stat.size - TAIL_BYTES);
+          recoverFromContent(buf.toString("utf-8"));
+        } finally {
+          closeSync(fd);
+        }
       }
     } catch {
       // If recovery fails, start from genesis
@@ -146,10 +156,15 @@ export function recordAuditEvent(params: {
   actor: AuditActor;
   resource?: string;
   detail?: Record<string, unknown>;
+  /** Explicit trace context; falls back to the async-scoped current context. */
+  trace?: TraceContext;
 }): AuditEvent {
   if (!initialized) {
     initAuditTrail();
   }
+
+  // Resolve trace once so skipped-category and persisted paths agree.
+  const trace = params.trace ?? getCurrentTraceContext();
 
   // Check if category is enabled (O(1) Set lookup)
   if (enabledCategories) {
@@ -166,6 +181,7 @@ export function recordAuditEvent(params: {
         actor: params.actor,
         resource: params.resource,
         detail: params.detail,
+        trace,
         previousHash: lastHash,
       };
       const hash = computeEventHash(lastHash, eventWithoutHash);
@@ -189,6 +205,7 @@ export function recordAuditEvent(params: {
     actor: params.actor,
     resource: params.resource,
     detail: params.detail,
+    trace,
     previousHash,
   };
 
@@ -272,9 +289,11 @@ function matchesFilter(event: AuditEvent, params: AuditTrailQueryParams): boolea
   if (params.actorId && event.actor.actorId !== params.actorId) return false;
   if (params.since && event.ts < params.since) return false;
   if (params.until && event.ts > params.until) return false;
+  if (params.traceId && event.trace?.traceId !== params.traceId) return false;
   if (params.search) {
     const needle = params.search.toLowerCase();
-    const haystack = `${event.action} ${event.resource ?? ""} ${JSON.stringify(event.detail ?? {})}`.toLowerCase();
+    const haystack =
+      `${event.action} ${event.resource ?? ""} ${JSON.stringify(event.detail ?? {})}`.toLowerCase();
     if (!haystack.includes(needle)) return false;
   }
   return true;

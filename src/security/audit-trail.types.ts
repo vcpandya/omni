@@ -1,5 +1,7 @@
 // ── Immutable Audit Trail — Core Types ──────────────────────────
 
+import type { TraceContext } from "./trace-context.js";
+
 export type AuditEventCategory =
   | "auth"
   | "approval"
@@ -12,7 +14,8 @@ export type AuditEventCategory =
   | "operator"
   | "remote-agent"
   | "sso"
-  | "fleet";
+  | "fleet"
+  | "code-intel";
 
 export type AuditEventSeverity = "info" | "warn" | "critical";
 
@@ -34,6 +37,8 @@ export type AuditEvent = {
   actor: AuditActor;
   resource?: string;
   detail?: Record<string, unknown>;
+  /** W3C trace context — optional correlation id for OTEL/SIEM pivot. */
+  trace?: TraceContext;
   hash: string;
   previousHash: string;
 };
@@ -47,6 +52,8 @@ export type AuditTrailQueryParams = {
   limit?: number;
   offset?: number;
   search?: string;
+  /** Filter to events carrying this W3C trace-id (32-char hex). */
+  traceId?: string;
 };
 
 export type AuditTrailQueryResult = {
