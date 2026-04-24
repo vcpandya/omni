@@ -41,12 +41,14 @@ export function renderWizard(props: WizardProps): TemplateResult {
       <div class="wizard-content" .key=${step?.id ?? "loading"}>
         ${props.wizardLoading && !step ? renderWizardLoading() : nothing}
         ${step ? renderWizardStep(step, props) : nothing}
-        ${props.wizardError
-          ? html`<div class="wizard-note wizard-note--danger" style="margin-top:16px">
+        ${
+          props.wizardError
+            ? html`<div class="wizard-note wizard-note--danger" style="margin-top:16px">
               <div class="wizard-note__title">Error</div>
               <div class="wizard-note__body">${props.wizardError}</div>
             </div>`
-          : nothing}
+            : nothing
+        }
       </div>
       <div class="wizard-footer">
         <div class="wizard-footer__left">
@@ -61,14 +63,23 @@ export function renderWizard(props: WizardProps): TemplateResult {
           >Cancel</button>
         </div>
         <div class="wizard-footer__right">
-          ${step?.type === "note"
-            ? html`<button
+          ${
+            step?.type === "note"
+              ? html`<button
                 class="wizard-btn wizard-btn--primary"
                 ?disabled=${props.wizardLoading}
                 @click=${() => answerWizardStep(props, step.id, true)}
-              >${props.wizardLoading ? html`<span class="wizard-spinner"></span>` : nothing}
-              Continue</button>`
-            : nothing}
+              >${
+                props.wizardLoading
+                  ? html`
+                      <span class="wizard-spinner"></span> Continue
+                    `
+                  : html`
+                      Continue <span class="wizard-btn__kbd" aria-hidden="true">⏎</span>
+                    `
+              }</button>`
+              : nothing
+          }
         </div>
       </div>
     </div>
@@ -80,30 +91,58 @@ export function renderWizard(props: WizardProps): TemplateResult {
 // ---------------------------------------------------------------------------
 
 function renderWizardSidebar(activeIndex: number): TemplateResult {
+  // Numeric pips (01, 02, …) double as a progress marker and a compact id —
+  // no need for separate dot + check SVGs when the pip itself renders the state.
   return html`
     <aside class="wizard-sidebar">
       <div class="wizard-sidebar__brand">
         <div class="wizard-sidebar__brand-title">OMNI</div>
-        <div class="wizard-sidebar__brand-sub">OpenClaw for Enterprises</div>
+        <div class="wizard-sidebar__brand-sub">OpenClaw · Enterprise</div>
       </div>
-      <div class="wizard-step-list">
-        ${WIZARD_STEP_LABELS.map(
-          (label, i) => html`
-            <div class="wizard-step-item ${i === activeIndex ? "wizard-step-item--active" : ""} ${i < activeIndex ? "wizard-step-item--completed" : ""}">
-              ${i < activeIndex
-                ? html`<span class="wizard-step-check" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" width="14" height="14"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  </span>`
-                : html`<span class="wizard-step-dot"></span>`}
+      <div class="wizard-step-list" role="list">
+        ${WIZARD_STEP_LABELS.map((label, i) => {
+          const isActive = i === activeIndex;
+          const isCompleted = i < activeIndex;
+          const stateClass = isActive
+            ? "wizard-step-item--active"
+            : isCompleted
+              ? "wizard-step-item--completed"
+              : "";
+          return html`
+            <div
+              class="wizard-step-item ${stateClass}"
+              role="listitem"
+              aria-current=${isActive ? "step" : nothing}
+            >
+              <span class="wizard-step-pip" aria-hidden="true">
+                ${
+                  isCompleted
+                    ? html`
+                        <svg viewBox="0 0 24 24" width="12" height="12">
+                          <path
+                            d="M20 6 9 17l-5-5"
+                            stroke="currentColor"
+                            stroke-width="3"
+                            fill="none"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          />
+                        </svg>
+                      `
+                    : String(i + 1).padStart(2, "0")
+                }
+              </span>
               <div>
                 <span>${label}</span>
-                ${WIZARD_STEP_DESCRIPTIONS[label]
-                  ? html`<div class="wizard-step-desc">${WIZARD_STEP_DESCRIPTIONS[label]}</div>`
-                  : nothing}
+                ${
+                  WIZARD_STEP_DESCRIPTIONS[label]
+                    ? html`<div class="wizard-step-desc">${WIZARD_STEP_DESCRIPTIONS[label]}</div>`
+                    : nothing
+                }
               </div>
             </div>
-          `,
-        )}
+          `;
+        })}
       </div>
     </aside>
   `;
@@ -114,11 +153,37 @@ function renderWizardSidebar(activeIndex: number): TemplateResult {
 // ---------------------------------------------------------------------------
 
 function renderWizardWelcome(props: WizardProps): TemplateResult {
-  const features = [
-    { icon: "layers", title: "Multi-Channel", desc: "Discord, Slack, WhatsApp, Nostr — unified AI" },
-    { icon: "shield", title: "Enterprise Security", desc: "OWASP compliance, SOC2/HIPAA profiles" },
-    { icon: "brain", title: "30+ AI Providers", desc: "OpenAI, Anthropic, Azure, Bedrock, Vertex" },
-    { icon: "clock", title: "Always On", desc: "Daemon service, cron jobs, health monitoring" },
+  // Proof-strip: signal concrete enterprise-grade capabilities up-front.
+  // Each slot is a stat, not a feature description — buyers scan these in <2s.
+  const stats = [
+    {
+      eyebrow: "Providers",
+      value: "30+",
+      title: "Multi-Cloud AI",
+      desc: "Azure OpenAI, Bedrock, Vertex AI, plus API & self-hosted",
+      icon: "brain",
+    },
+    {
+      eyebrow: "Compliance",
+      value: "SOC2 / HIPAA",
+      title: "Ready on day one",
+      desc: "Zero-Trust, SOC2-Hardened, HIPAA profiles with audit trail",
+      icon: "shield",
+    },
+    {
+      eyebrow: "OWASP",
+      value: "20 / 20",
+      title: "LLM + Agentic risks",
+      desc: "OWASP LLM Top 10 (2025) + Agentic Top 10 (2026), fully mapped",
+      icon: "check",
+    },
+    {
+      eyebrow: "Setup",
+      value: "< 2 min",
+      title: "Frictionless onboarding",
+      desc: "Profile-driven config, SSO provisioning, fleet sync",
+      icon: "clock",
+    },
   ] as const;
 
   return html`
@@ -126,44 +191,79 @@ function renderWizardWelcome(props: WizardProps): TemplateResult {
       ${renderWizardSidebar(-1)}
       <div class="wizard-content">
         <div class="wizard-welcome">
+          <div class="wizard-welcome__eyebrow">
+            <span class="wizard-welcome__eyebrow-dot" aria-hidden="true"></span>
+            Enterprise control plane · v1.0
+          </div>
           <div class="wizard-welcome__logo">OMNI</div>
           <div class="wizard-welcome__tagline">
-            OpenClaw for Enterprises — Secure, Multi-Channel, Always On
+            The <strong>enterprise-hardened</strong> build of OpenClaw — secure
+            by default, auditable by design, deployable across your fleet.
           </div>
-          <div class="wizard-features">
-            ${features.map(
-              (f) => html`
-                <div class="wizard-feature-card">
-                  <span class="wizard-feature-card__icon icon" aria-hidden="true">
-                    ${f.icon === "layers"
-                      ? html`<svg viewBox="0 0 24 24"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z" /><path d="m22.6 16.08-8.58 3.91a2 2 0 0 1-1.66 0l-8.58-3.9" /><path d="m22.6 11.08-8.58 3.91a2 2 0 0 1-1.66 0l-8.58-3.9" /></svg>`
-                      : f.icon === "shield"
-                        ? html`<svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>`
-                        : f.icon === "brain"
-                          ? html`<svg viewBox="0 0 24 24"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z" /><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z" /><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4" /></svg>`
-                          : html`<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>`}
-                  </span>
-                  <div class="wizard-feature-card__title">${f.title}</div>
-                  <div class="wizard-feature-card__desc">${f.desc}</div>
+
+          <div class="wizard-features" role="list" aria-label="Enterprise proof points">
+            ${stats.map(
+              (s) => html`
+                <div class="wizard-feature-card" role="listitem">
+                  <div class="wizard-feature-card__eyebrow">
+                    <span class="wizard-feature-card__eyebrow-icon" aria-hidden="true">
+                      ${
+                        s.icon === "shield"
+                          ? html`
+                              <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+                            `
+                          : s.icon === "brain"
+                            ? html`
+                                <svg viewBox="0 0 24 24">
+                                  <path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z" />
+                                  <path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z" />
+                                </svg>
+                              `
+                            : s.icon === "clock"
+                              ? html`
+                                  <svg viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <polyline points="12 6 12 12 16 14" />
+                                  </svg>
+                                `
+                              : html`
+                                  <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12" /></svg>
+                                `
+                      }
+                    </span>
+                    ${s.eyebrow}
+                  </div>
+                  <div class="wizard-feature-card__value">${s.value}</div>
+                  <div class="wizard-feature-card__title">${s.title}</div>
+                  <div class="wizard-feature-card__desc">${s.desc}</div>
                 </div>
               `,
             )}
           </div>
+
           <button
             class="wizard-btn wizard-btn--primary"
-            style="margin-top: 32px"
+            style="margin-top: 40px"
             ?disabled=${props.wizardLoading}
             @click=${() => startWizard(props)}
           >
-            ${props.wizardLoading
-              ? html`<span class="wizard-spinner"></span> Starting...`
-              : "Get Started"}
+            ${
+              props.wizardLoading
+                ? html`
+                    <span class="wizard-spinner"></span> Starting...
+                  `
+                : html`
+                    Get started <span class="wizard-btn__kbd" aria-hidden="true">⏎</span>
+                  `
+            }
           </button>
-          ${props.wizardError
-            ? html`<div class="wizard-note wizard-note--danger" style="margin-top:24px">
+          ${
+            props.wizardError
+              ? html`<div class="wizard-note wizard-note--danger" style="margin-top:24px">
                 <div class="wizard-note__body">${props.wizardError}</div>
               </div>`
-            : nothing}
+              : nothing
+          }
         </div>
       </div>
       <div class="wizard-footer">
@@ -241,9 +341,10 @@ function renderSelect(step: WizardStep, props: WizardProps): TemplateResult {
   return html`
     <div class="wizard-content__title">${step.title ?? step.message}</div>
     ${step.title && step.message ? html`<div class="wizard-content__subtitle">${step.message}</div>` : nothing}
-    ${isProviderSelect
-      ? renderProviderSelect(options, selected, step, props)
-      : html`
+    ${
+      isProviderSelect
+        ? renderProviderSelect(options, selected, step, props)
+        : html`
         <div class="${isComplianceProfile ? "compliance-grid" : "wizard-select-grid"}">
           ${options.map((opt) => {
             const isSelected = opt.value === selected;
@@ -264,7 +365,8 @@ function renderSelect(step: WizardStep, props: WizardProps): TemplateResult {
             `;
           })}
         </div>
-      `}
+      `
+    }
   `;
 }
 
@@ -274,7 +376,7 @@ function renderComplianceCard(
   step: WizardStep,
   props: WizardProps,
 ): TemplateResult {
-  // Map profile IDs to risk levels for badge styling
+  // Map profile IDs to risk levels for badge styling + visual accent stripe.
   const riskMap: Record<string, string> = {
     "zero-trust": "maximum",
     "soc2-hardened": "high",
@@ -282,21 +384,83 @@ function renderComplianceCard(
     standard: "balanced",
     development: "relaxed",
   };
-  const riskLevel = riskMap[String(opt.value)] ?? "balanced";
+  const key = String(opt.value);
+  const riskLevel = riskMap[key] ?? "balanced";
+  const isRecommended = key === "soc2-hardened";
+
+  // Capability matrix — each axis is 1..4 ticks, filled proportional to strictness.
+  // This surfaces the trust ladder at a glance, so operators can compare profiles
+  // without reading long descriptions.
+  const CAP_MATRIX: Record<string, { sandbox: number; auth: number; log: number; tool: number }> = {
+    "zero-trust": { sandbox: 4, auth: 4, log: 4, tool: 4 },
+    "soc2-hardened": { sandbox: 3, auth: 3, log: 4, tool: 3 },
+    hipaa: { sandbox: 4, auth: 4, log: 4, tool: 3 },
+    standard: { sandbox: 2, auth: 2, log: 2, tool: 2 },
+    development: { sandbox: 1, auth: 1, log: 1, tool: 1 },
+  };
+  const caps = CAP_MATRIX[key] ?? { sandbox: 2, auth: 2, log: 2, tool: 2 };
+
+  const renderTicks = (filled: number) => html`
+    <span class="compliance-card__matrix-strength" aria-label="Level ${filled} of 4">
+      ${[1, 2, 3, 4].map(
+        (n) =>
+          html`<span class="compliance-card__matrix-tick ${n <= filled ? "compliance-card__matrix-tick--on" : ""}"></span>`,
+      )}
+    </span>
+  `;
 
   return html`
     <div
-      class="compliance-card ${isSelected ? "compliance-card--selected" : ""}"
+      class="compliance-card ${isSelected ? "compliance-card--selected" : ""} ${isRecommended ? "compliance-card--recommended" : ""}"
+      data-risk=${riskLevel}
+      tabindex="0"
+      role="button"
+      aria-pressed=${isSelected}
+      @keydown=${(e: KeyboardEvent) => {
+        // Space must preventDefault to stop page scroll; assistive tech + browsers
+        // auto-synthesize click on Enter for role="button" + tabindex="0", so we
+        // deliberately leave Enter to the @click handler to avoid double-firing.
+        if (e.key === " ") {
+          e.preventDefault();
+          props.wizardSelectedValue = opt.value;
+          answerWizardStep(props, step.id, opt.value);
+        }
+      }}
       @click=${() => {
         props.wizardSelectedValue = opt.value;
         answerWizardStep(props, step.id, opt.value);
       }}
     >
+      ${
+        isRecommended
+          ? html`
+              <span class="compliance-card__recommended-pill" aria-label="Recommended">Recommended</span>
+            `
+          : nothing
+      }
       <span class="compliance-card__badge compliance-card__badge--${riskLevel}">
         ${riskLevel}
       </span>
       <div class="compliance-card__title">${opt.label}</div>
       <div class="compliance-card__desc">${opt.hint}</div>
+      <div class="compliance-card__matrix" aria-label="Capability posture">
+        <div class="compliance-card__matrix-row">
+          <span class="compliance-card__matrix-label">Sandbox</span>
+          ${renderTicks(caps.sandbox)}
+        </div>
+        <div class="compliance-card__matrix-row">
+          <span class="compliance-card__matrix-label">Auth</span>
+          ${renderTicks(caps.auth)}
+        </div>
+        <div class="compliance-card__matrix-row">
+          <span class="compliance-card__matrix-label">Logging</span>
+          ${renderTicks(caps.log)}
+        </div>
+        <div class="compliance-card__matrix-row">
+          <span class="compliance-card__matrix-label">Tool safety</span>
+          ${renderTicks(caps.tool)}
+        </div>
+      </div>
     </div>
   `;
 }
@@ -340,7 +504,13 @@ function renderText(step: WizardStep, props: WizardProps): TemplateResult {
           type="submit"
           class="wizard-btn wizard-btn--primary"
           ?disabled=${props.wizardLoading}
-        >${props.wizardLoading ? html`<span class="wizard-spinner"></span>` : nothing}
+        >${
+          props.wizardLoading
+            ? html`
+                <span class="wizard-spinner"></span>
+              `
+            : nothing
+        }
         Continue</button>
       </div>
     </form>
@@ -383,7 +553,11 @@ function renderConfirm(step: WizardStep, props: WizardProps): TemplateResult {
 
 function renderMultiselect(step: WizardStep, props: WizardProps): TemplateResult {
   const options = step.options ?? [];
-  const selected = new Set((props.wizardSelectedValue as unknown[] | null) ?? (step.initialValue as unknown[] | null) ?? []);
+  const selected = new Set(
+    (props.wizardSelectedValue as unknown[] | null) ??
+      (step.initialValue as unknown[] | null) ??
+      [],
+  );
 
   return html`
     <div class="wizard-content__title">${step.title ?? step.message}</div>
@@ -503,12 +677,12 @@ function renderProviderCard(
         answerWizardStep(props, step.id, opt.value);
       }}
     >
-      ${badge
-        ? html`<span class="provider-card__badge provider-card__badge--${badge}">${badge}</span>`
-        : nothing}
-      ${iconSvg
-        ? html`<span class="provider-card__icon">${unsafeHTML(iconSvg)}</span>`
-        : nothing}
+      ${
+        badge
+          ? html`<span class="provider-card__badge provider-card__badge--${badge}">${badge}</span>`
+          : nothing
+      }
+      ${iconSvg ? html`<span class="provider-card__icon">${unsafeHTML(iconSvg)}</span>` : nothing}
       <div class="provider-card__label">${opt.label}</div>
       ${desc ? html`<div class="provider-card__desc">${desc}</div>` : nothing}
     </div>
@@ -551,9 +725,7 @@ function renderReviewDashboard(step: WizardStep): TemplateResult {
 
   return html`
     <div class="wizard-content__title">${step.title ?? "Configuration Review"}</div>
-    ${step.message
-      ? html`<div class="wizard-content__subtitle">${step.message}</div>`
-      : nothing}
+    ${step.message ? html`<div class="wizard-content__subtitle">${step.message}</div>` : nothing}
     <div class="review-grid">
       ${cards.map(
         (card) => html`
@@ -592,8 +764,10 @@ function renderOwaspDashboard(step: WizardStep): TemplateResult {
     <div class="wizard-content__title">${step.title ?? "OWASP Compliance"}</div>
     <div class="owasp-dashboard">
       <div class="owasp-dashboard__header">
-        <div class="owasp-dashboard__score">${greenCount}/${total}</div>
-        <div class="owasp-dashboard__score-label">risks mitigated</div>
+        <div class="owasp-dashboard__score">
+          ${greenCount}<small>/${total}</small>
+        </div>
+        <div class="owasp-dashboard__score-label">Risks mitigated · OWASP 2025/2026</div>
       </div>
       <div class="owasp-columns">
         <div>
@@ -606,11 +780,13 @@ function renderOwaspDashboard(step: WizardStep): TemplateResult {
         </div>
       </div>
     </div>
-    ${step.message
-      ? html`<div class="wizard-note" style="margin-top: 20px">
+    ${
+      step.message
+        ? html`<div class="wizard-note" style="margin-top: 20px">
           <div class="wizard-note__body">${step.message}</div>
         </div>`
-      : nothing}
+        : nothing
+    }
   `;
 }
 

@@ -1,5 +1,24 @@
 /* ── Activity Timeline ──────────────────────────────────────── */
 
+/* Category token palette — mapped to semantic tokens where possible, with a
+   small set of category-only tokens for the remaining distinctions. Defined
+   on :root so both the .ts renderer and .css selectors can reference them. */
+:root {
+  --cat-auth: var(--info);
+  --cat-approval: var(--warn);
+  --cat-config: #8b5cf6;
+  --cat-tool: var(--danger);
+  --cat-skill: var(--ok);
+  --cat-sandbox: var(--info);
+  --cat-device: #ec4899;
+  --cat-system: var(--muted-strong);
+  --cat-operator: var(--accent);
+  --cat-remote-agent: var(--accent-2);
+  --cat-sso: #8b5cf6;
+  --cat-fleet: var(--accent-2);
+  --cat-code-intel: var(--info);
+}
+
 .activity {
   display: flex;
   flex-direction: column;
@@ -35,8 +54,12 @@
   font-weight: 500;
 }
 
-.activity-integrity.ok { color: var(--ok); }
-.activity-integrity.fail { color: var(--danger); }
+.activity-integrity.ok {
+  color: var(--ok);
+}
+.activity-integrity.fail {
+  color: var(--danger);
+}
 
 /* Streaming indicator */
 .activity-streaming {
@@ -59,8 +82,15 @@
 }
 
 @keyframes activity-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.8); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
 }
 
 /* Stats */
@@ -302,7 +332,9 @@
 }
 
 @keyframes activity-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Footer */

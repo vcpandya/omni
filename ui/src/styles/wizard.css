@@ -16,75 +16,143 @@
   color: var(--text);
 }
 
-@media (max-width: 768px) {
-  .wizard {
-    grid-template-columns: 1fr;
-  }
-  .wizard-sidebar {
-    display: none;
-  }
-}
+/* Responsive overrides live at the bottom of this file so they win the
+   cascade against later base rules (`.wizard-sidebar { display: flex }`
+   etc). Grep for "Responsive" below. */
 
 /* ---------------------------------------------------------------------------
-   Sidebar — Step indicator
+   Sidebar — Step indicator (Operator Console: connected rail + numeric pips)
    --------------------------------------------------------------------------- */
 
 .wizard-sidebar {
   background: var(--card);
   border-right: 1px solid var(--border);
-  padding: 32px 24px;
+  padding: 32px 20px 32px 24px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .wizard-sidebar__brand {
-  margin-bottom: 32px;
-  text-align: center;
+  margin-bottom: 36px;
+  padding: 0 8px;
 }
 
 .wizard-sidebar__brand-title {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 22px;
-  letter-spacing: 0.12em;
+  font-size: 26px;
+  letter-spacing: 0.14em;
   color: var(--text-strong);
+  /* Subtle engraved weight — no new colors, uses existing tokens. */
+  text-shadow: 0 1px 0 var(--bg);
 }
 
 .wizard-sidebar__brand-sub {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--muted);
-  letter-spacing: 0.05em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  margin-top: 4px;
+  margin-top: 6px;
+  font-weight: 500;
 }
 
+/* Continuous vertical rail behind the step list. */
 .wizard-step-list {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  padding-left: 8px;
+}
+
+.wizard-step-list::before {
+  content: "";
+  position: absolute;
+  top: 22px;
+  bottom: 22px;
+  left: 22px;
+  width: 1px;
+  background: var(--border);
+  pointer-events: none;
 }
 
 .wizard-step-item {
-  display: flex;
+  display: grid;
+  grid-template-columns: 28px 1fr;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
+  padding: 10px 12px 10px 0;
   border-radius: var(--radius-md);
   font-size: 13px;
   color: var(--muted);
-  transition: all var(--duration-normal) var(--ease-out);
+  transition: color var(--duration-normal) var(--ease-out);
+  position: relative;
 }
 
 .wizard-step-item--active {
   color: var(--text-strong);
-  background: var(--bg-hover);
 }
 
 .wizard-step-item--completed {
+  color: var(--text);
+}
+
+/* Numeric pip replaces the lone dot; doubles as a W3C-visible progress marker. */
+.wizard-step-pip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--card);
+  border: 1px solid var(--border-strong);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  z-index: 1;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+  font-variant-numeric: tabular-nums;
+}
+
+.wizard-step-item--active .wizard-step-pip {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-foreground);
+  /* Calm breathing pulse — 2s loop, not looping motion that draws the eye. */
+  animation: wizard-pulse 2.2s var(--ease-out) infinite;
+}
+
+.wizard-step-item--completed .wizard-step-pip {
+  background: var(--ok-subtle);
+  border-color: var(--ok);
   color: var(--ok);
 }
 
+@keyframes wizard-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--accent-glow);
+  }
+  50% {
+    box-shadow: 0 0 0 6px transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wizard-step-item--active .wizard-step-pip {
+    animation: none;
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+}
+
+/* Backward-compat: older renders may still use the legacy dot class. */
 .wizard-step-dot {
   width: 10px;
   height: 10px;
@@ -184,6 +252,9 @@
   background: var(--accent);
   color: var(--accent-foreground);
   border-color: var(--accent);
+  padding: 10px 22px 10px 24px;
+  /* Make room for the keyboard hint ghost. */
+  gap: 10px;
 }
 
 .wizard-btn--primary:hover {
@@ -196,28 +267,128 @@
   pointer-events: none;
 }
 
+.wizard-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Keyboard affordance shown inside primary CTAs. */
+.wizard-btn__kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0;
+  margin-left: 2px;
+  color: inherit;
+}
+
+.wizard-btn:not(.wizard-btn--primary) .wizard-btn__kbd {
+  background: var(--bg-hover);
+  border-color: var(--border);
+  color: var(--muted);
+}
+
 /* ---------------------------------------------------------------------------
-   Welcome hero
+   Welcome hero — ambient glow, weighted wordmark, enterprise proof-strip
    --------------------------------------------------------------------------- */
 
 .wizard-welcome {
   text-align: center;
-  padding: 64px 0;
+  padding: 72px 0 56px;
+  position: relative;
+  isolation: isolate;
+}
+
+/* Radial ambient glow — lights the wordmark without hardcoded color. */
+.wizard-welcome::before {
+  content: "";
+  position: absolute;
+  inset: -40px 0 auto 50%;
+  transform: translateX(-50%);
+  width: min(640px, 80%);
+  height: 320px;
+  background: radial-gradient(ellipse at center, var(--accent-glow) 0%, transparent 70%);
+  opacity: 0.7;
+  z-index: -1;
+  pointer-events: none;
+  animation: wizard-hero-fade 640ms var(--ease-out);
+}
+
+@keyframes wizard-hero-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.7;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wizard-welcome::before {
+    animation: none;
+  }
+}
+
+.wizard-welcome__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 6px 12px;
+  border-radius: var(--radius-full, 9999px);
+  border: 1px solid var(--border);
+  background: var(--card);
+  margin-bottom: 24px;
+}
+
+.wizard-welcome__eyebrow-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 8px var(--ok);
 }
 
 .wizard-welcome__logo {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 48px;
-  letter-spacing: 0.15em;
+  font-size: clamp(56px, 9vw, 88px);
+  letter-spacing: 0.14em;
   color: var(--text-strong);
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+  line-height: 1;
+  /* Engraved weight using only existing tokens. */
+  text-shadow:
+    0 1px 0 var(--bg),
+    0 2px 24px var(--accent-glow);
 }
 
 .wizard-welcome__tagline {
-  font-size: 16px;
+  font-size: 17px;
   color: var(--muted);
-  margin-bottom: 40px;
+  margin-bottom: 48px;
+  max-width: 560px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.5;
+}
+
+.wizard-welcome__tagline strong {
+  color: var(--text);
+  font-weight: 500;
 }
 
 /* ---------------------------------------------------------------------------
@@ -353,34 +524,143 @@
 }
 
 /* ---------------------------------------------------------------------------
-   Compliance profile cards
+   Compliance profile cards — trading-card layout with trust ladder
    --------------------------------------------------------------------------- */
 
 .compliance-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 16px;
-  margin-top: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+  margin-top: 20px;
 }
 
 .compliance-card {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 24px;
+  padding: 24px 22px 22px 26px;
   cursor: pointer;
-  transition: all var(--duration-fast);
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    background var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
   background: var(--card);
   position: relative;
+  overflow: hidden;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Left accent stripe — color encodes the risk posture. */
+.compliance-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--border-strong);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.compliance-card[data-risk="maximum"]::before {
+  background: var(--danger);
+}
+.compliance-card[data-risk="high"]::before,
+.compliance-card[data-risk="elevated"]::before {
+  background: var(--warn);
+}
+.compliance-card[data-risk="balanced"]::before {
+  background: var(--accent);
+}
+.compliance-card[data-risk="relaxed"]::before {
+  background: var(--muted);
 }
 
 .compliance-card:hover {
   border-color: var(--accent);
-  box-shadow: var(--shadow-glow);
+  transform: translateY(-1px);
+}
+
+.compliance-card:active {
+  transform: translateY(0) scale(0.995);
 }
 
 .compliance-card--selected {
   border-color: var(--accent);
   background: var(--accent-subtle);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+
+.compliance-card--recommended {
+  border-color: var(--accent);
+}
+
+.compliance-card__recommended-pill {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: var(--radius-full, 9999px);
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.compliance-card__matrix {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border);
+}
+
+.compliance-card__matrix-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.compliance-card__matrix-label {
+  font-family: var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+
+.compliance-card__matrix-strength {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.compliance-card__matrix-tick {
+  width: 6px;
+  height: 6px;
+  border-radius: 1px;
+  background: var(--border-strong);
+}
+
+.compliance-card__matrix-tick--on {
+  background: var(--accent);
+}
+
+.compliance-card[data-risk="maximum"] .compliance-card__matrix-tick--on {
+  background: var(--danger);
+}
+.compliance-card[data-risk="high"] .compliance-card__matrix-tick--on,
+.compliance-card[data-risk="elevated"] .compliance-card__matrix-tick--on {
+  background: var(--warn);
+}
+.compliance-card[data-risk="relaxed"] .compliance-card__matrix-tick--on {
+  background: var(--muted);
 }
 
 .compliance-card__badge {
@@ -473,30 +753,50 @@
 }
 
 /* ---------------------------------------------------------------------------
-   OWASP dashboard
+   OWASP dashboard — hero score + scannable heatmap lane
    --------------------------------------------------------------------------- */
 
 .owasp-dashboard {
-  margin-top: 24px;
+  margin-top: 28px;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  position: relative;
+  overflow: hidden;
 }
 
 .owasp-dashboard__header {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 20px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
 }
 
 .owasp-dashboard__score {
   font-family: var(--font-display);
-  font-size: 32px;
+  font-size: 64px;
   font-weight: 700;
   color: var(--text-strong);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.owasp-dashboard__score small {
+  font-size: 24px;
+  color: var(--muted);
+  font-weight: 500;
 }
 
 .owasp-dashboard__score-label {
-  font-size: 13px;
+  font-family: var(--mono);
+  font-size: 11px;
   color: var(--muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .owasp-columns {
@@ -574,7 +874,8 @@
 .auth-strength__fill {
   height: 100%;
   border-radius: var(--radius-full, 9999px);
-  transition: width var(--duration-normal) var(--ease-out),
+  transition:
+    width var(--duration-normal) var(--ease-out),
     background var(--duration-normal);
 }
 
@@ -741,6 +1042,22 @@
   }
 }
 
+/* Respect user motion preferences — replace rotation with a quiet pulse. */
+@media (prefers-reduced-motion: reduce) {
+  .wizard-spinner {
+    animation: wizard-spinner-pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes wizard-spinner-pulse {
+    0%,
+    100% {
+      opacity: 0.5;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+}
+
 .wizard-progress-label {
   display: flex;
   align-items: center;
@@ -751,41 +1068,75 @@
 }
 
 /* ---------------------------------------------------------------------------
-   Feature highlight cards (welcome page)
+   Feature highlight cards (welcome page) — now a 4-up proof-strip
    --------------------------------------------------------------------------- */
 
 .wizard-features {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-top: 32px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  margin-top: 40px;
   text-align: left;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  overflow: hidden;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 860px) {
+  .wizard-features {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 480px) {
   .wizard-features {
     grid-template-columns: 1fr;
   }
 }
 
 .wizard-feature-card {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 20px;
-  background: var(--card);
-  transition: border-color var(--duration-fast);
+  padding: 20px 22px;
+  background: transparent;
+  transition: background var(--duration-fast) var(--ease-out);
+  border-right: 1px solid var(--border);
+  position: relative;
+}
+
+.wizard-feature-card:last-child {
+  border-right: none;
+}
+
+@media (max-width: 860px) {
+  .wizard-feature-card:nth-child(2n) {
+    border-right: none;
+  }
+  .wizard-feature-card:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--border);
+  }
+}
+
+@media (max-width: 480px) {
+  .wizard-feature-card {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .wizard-feature-card:last-child {
+    border-bottom: none;
+  }
 }
 
 .wizard-feature-card:hover {
-  border-color: var(--border-hover);
+  background: var(--bg-hover);
 }
 
+/* Legacy icon block preserved for any path still rendering it. */
 .wizard-feature-card__icon {
   display: inline-block;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   color: var(--accent);
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .wizard-feature-card__icon svg {
@@ -798,17 +1149,57 @@
   stroke-linejoin: round;
 }
 
+/* Stat-strip variant — the new default. */
+.wizard-feature-card__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.wizard-feature-card__eyebrow-icon {
+  width: 12px;
+  height: 12px;
+  color: var(--accent);
+}
+
+.wizard-feature-card__eyebrow-icon svg {
+  width: 100%;
+  height: 100%;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.wizard-feature-card__value {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--text-strong);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
 .wizard-feature-card__title {
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-strong);
-  margin-bottom: 4px;
+  margin-top: 6px;
+  margin-bottom: 2px;
 }
 
 .wizard-feature-card__desc {
   font-size: 12px;
   color: var(--muted);
-  line-height: 1.4;
+  line-height: 1.45;
 }
 
 /* ---------------------------------------------------------------------------
@@ -960,4 +1351,116 @@
   color: var(--muted);
   margin-top: 6px;
   line-height: 1.4;
+}
+
+/* ==========================================================================
+   Responsive — tablet + mobile overrides
+   Declared last so they win the cascade over the base single-column
+   selectors above.
+   ========================================================================== */
+
+/* Tablet and below (under 1024px): tighten hero + layout padding */
+@media (max-width: 1024px) {
+  .wizard-content {
+    padding: 40px 32px;
+  }
+  .wizard-footer {
+    padding: 16px 32px;
+  }
+  .wizard-welcome__logo {
+    font-size: clamp(44px, 11vw, 72px);
+  }
+}
+
+/* Mobile (under 768px): single column, hide step rail, shrink everything */
+@media (max-width: 768px) {
+  .wizard {
+    grid-template-columns: 1fr;
+  }
+  .wizard-sidebar {
+    display: none;
+  }
+  .wizard-content {
+    padding: 28px 20px 24px;
+  }
+  .wizard-footer {
+    padding: 14px 20px;
+    flex-direction: row;
+    gap: 8px;
+  }
+  .wizard-welcome {
+    padding: 40px 0 32px;
+  }
+  .wizard-welcome__logo {
+    font-size: clamp(40px, 14vw, 56px);
+    letter-spacing: 0.1em;
+  }
+  .wizard-welcome__tagline {
+    font-size: 15px;
+    margin-bottom: 28px;
+  }
+  .wizard-features {
+    grid-template-columns: 1fr;
+  }
+  /* Override the desktop border-right between proof-strip cells when they
+     stack vertically — use a single bottom border per cell. */
+  .wizard-feature-card {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .wizard-feature-card:last-child {
+    border-bottom: none;
+  }
+  /* Compliance grid: single column so the whole trading-card fits. */
+  .compliance-grid {
+    grid-template-columns: 1fr;
+  }
+  .compliance-card {
+    min-height: auto;
+  }
+  /* OWASP dashboard stacks to one column already via its own media rule;
+     tighten score + padding for narrow viewports. */
+  .owasp-dashboard {
+    padding: 18px;
+  }
+  .owasp-dashboard__score {
+    font-size: 48px;
+  }
+  .owasp-dashboard__score small {
+    font-size: 18px;
+  }
+  /* Slide title in pillar step renders at 34px by default — shrink on mobile
+     so the "Security · Fleet · Context" headline doesn't break awkwardly. */
+  .slide--pillars .slide-inner {
+    padding: 28px 20px 32px;
+  }
+  .slide-title {
+    font-size: 24px;
+  }
+  .pillar-grid {
+    grid-template-columns: 1fr;
+  }
+  /* Provider cards and generic select cards: stack tighter. */
+  .wizard-select-grid {
+    grid-template-columns: 1fr;
+  }
+  .provider-card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Very narrow (under 480px): drop brand subtitle and ambient glow so the
+   hero doesn't feel cramped. */
+@media (max-width: 480px) {
+  .wizard-welcome::before {
+    display: none;
+  }
+  .wizard-welcome__eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+  }
+  .wizard-btn {
+    font-size: 13px;
+    padding: 9px 16px;
+  }
 }
