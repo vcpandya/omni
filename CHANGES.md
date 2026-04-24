@@ -44,11 +44,22 @@ Source: [`src/wizard/owasp-mapping.ts`](src/wizard/owasp-mapping.ts) · Docs: [`
 
 SHA-256 hash-chained immutable event log with tamper detection.
 
-- **Categories:** auth, config, tool, skill, sandbox, device, approval, operator, remote-agent, SSO, fleet.
+- **Categories:** auth, config, tool, skill, sandbox, device, approval, operator, remote-agent, SSO, fleet, code-intel.
 - **Operations:** query, stream, verify chain integrity, export (JSON/SIEM).
 - **Severity levels:** info, warning, error, critical.
 
 Source: [`src/security/audit-trail.ts`](src/security/audit-trail.ts) · Docs: [`docs/security/audit-trail.md`](docs/security/audit-trail.md)
+
+### Distributed Trace Correlation
+
+W3C-Trace-Context-compatible carrier that stamps audit events with `traceId` / `spanId`, so every security event can be pivoted to a full execution span in any OTEL backend (Datadog, Splunk, Honeycomb, Jaeger) without coupling core code to an OTEL SDK.
+
+- **Zero dependencies:** AsyncLocalStorage-backed, no OpenTelemetry SDK in core.
+- **W3C `traceparent`** header parse/format — interoperable with any upstream proxy or gateway that emits standard trace headers.
+- **Audit query:** events are filterable by `traceId`, enabling SIEM pivots from a `tool.blocked` audit event to the complete request span tree.
+- **Hash-chain safe:** new events include the trace field in their hashed payload; prior events still validate (JSON.stringify omits absent fields) — no migration required.
+
+Source: [`src/security/trace-context.ts`](src/security/trace-context.ts)
 
 ### Device Trust
 
@@ -194,6 +205,103 @@ SQLite-backed knowledge graph alongside vector + FTS:
 
 Source: [`src/memory/graph/`](src/memory/graph/) · Docs: [`docs/concepts/graph-memory.md`](docs/concepts/graph-memory.md)
 
+### Context Management Architecture
+
+```mermaid
+flowchart TB
+    subgraph "Omni Context Management Stack"
+        direction TB
+        TB["Token Budget — 5-Zone Allocation"]
+        SC["Semantic Cache — SHA-256 + Cosine Similarity"]
+        GM["Graph Memory — Entity Extraction + N-Hop Traversal"]
+        PI["PageIndex — Hierarchical Document Tree Retrieval"]
+        QS["QMD Search — BM25 + Vector + LLM Re-ranking"]
+        IC["Incremental Compaction — Rolling Digests"]
+        TG["Tool Result Guard — Per-Tool + Total Budget"]
+        RC["Result Compression — 3x Fact Extraction"]
+        CI["Code Intelligence — GitNexus Impact Analysis"]
+        TB --> SC --> GM --> PI --> QS --> IC --> TG --> RC --> CI
+    end
+```
+
+### Code Intelligence
+
+#### GitNexus — Structural Code Analysis
+
+Auto-detected external tool that provides knowledge-graph-based code intelligence via MCP.
+
+```mermaid
+flowchart LR
+    subgraph "GitNexus Bridge"
+        BD["Binary Detection<br/>cached"]
+        REG["Registry Check<br/>~/.gitnexus/registry.json"]
+        MCP["MCP Process<br/>stdio JSON-RPC"]
+    end
+    Agent -- "code_intel tool" --> BD
+    BD --> REG
+    REG --> MCP
+    MCP --> GitNexus["GitNexus CLI<br/>KuzuDB Graph"]
+```
+
+| Action | Description |
+|--------|-------------|
+| `status` | Check if GitNexus is available and workspace is indexed |
+| `query` | Search the knowledge graph by symbol name or pattern |
+| `context` | Get full context: definition, callers, callees, community |
+| `impact` | Analyze blast radius: what breaks if this symbol changes? |
+| `detect_changes` | Compare current code against indexed graph |
+| `rename` | Coordinated rename across all references |
+| `list_repos` | List all indexed repositories |
+| `index` | Index workspace (background, detached) |
+
+**Impact-Aware Editing Sequence:**
+
+```mermaid
+sequenceDiagram
+    participant Agent
+    participant Bridge as GitNexus Bridge
+    participant MCP as GitNexus MCP
+    Agent->>Bridge: impact(symbol)
+    Bridge->>MCP: tools/call impact
+    MCP-->>Bridge: affected files/symbols
+    Bridge-->>Agent: blast radius report
+    Note over Agent: Reviews impact before editing
+    Agent->>Agent: Makes targeted edits
+    Agent->>Bridge: detect_changes(repo)
+    Bridge->>MCP: tools/call detect_changes
+    MCP-->>Bridge: structural diff
+    Bridge-->>Agent: verification result
+```
+
+Skill: [`skills/gitnexus/SKILL.md`](skills/gitnexus/SKILL.md) · Source: [`src/agents/tools/gitnexus-bridge.ts`](src/agents/tools/gitnexus-bridge.ts)
+
+#### PageIndex — Hierarchical Document Retrieval
+
+Auto-detected external tool that provides hierarchical document-section tree indexing with LLM-based reasoning retrieval. Complements Graph Memory (entity-level) with document-structure-level navigation.
+
+```mermaid
+flowchart LR
+    subgraph "PageIndex Bridge"
+        BD2["Binary Detection<br/>pageindex / python -m pageindex"]
+        IDX["Index Discovery<br/>*.tree.json in workspace"]
+        CLI["CLI Invocation<br/>execFile with JSON output"]
+    end
+    Agent -- "page_index tool" --> BD2
+    BD2 --> IDX
+    IDX --> CLI
+    CLI --> PageIndex["PageIndex CLI<br/>Tree Index + LLM Retrieval"]
+```
+
+| Action | Description |
+|--------|-------------|
+| `status` | Check if PageIndex is installed and list indexed documents |
+| `index` | Generate hierarchical tree index for a document (PDF/markdown) |
+| `retrieve` | Reasoning-based retrieval: query the tree to find relevant sections |
+| `tree` | View the generated hierarchical tree structure |
+| `list_indexes` | List all indexed documents in the workspace |
+
+Skill: [`skills/pageindex/SKILL.md`](skills/pageindex/SKILL.md) · Source: [`src/agents/tools/pageindex-bridge.ts`](src/agents/tools/pageindex-bridge.ts)
+
 ---
 
 ## Web Wizard (Control UI)
@@ -271,6 +379,18 @@ All new methods follow the existing handler pattern (validate → business logic
 | `skills.trust.quarantine` | ADMIN | Block execution |
 | `skills.trust.release` | ADMIN | Release from quarantine |
 | `skills.trust.audit` | READ | Trust change history |
+
+### Code Intelligence
+
+| Method | Scope | Description |
+|--------|-------|-------------|
+| `code-intel.status` | READ | GitNexus availability and index status |
+| `code-intel.index` | ADMIN | Trigger GitNexus workspace indexing |
+| `code-intel.query` | READ | Search knowledge graph by symbol pattern |
+| `code-intel.impact` | READ | Analyze blast radius for a symbol |
+| `code-intel.drift` | READ | Detect structural drift since last index |
+| `code-intel.pageindex.status` | READ | PageIndex availability and indexed documents |
+| `code-intel.pageindex.index` | ADMIN | Generate PageIndex tree for a document |
 
 ---
 
@@ -363,6 +483,20 @@ All new methods follow the existing handler pattern (validate → business logic
 | `remote-registry.ts` | Remote agent registry with drift detection |
 | `remote-registry.types.ts` | Remote registry type definitions |
 
+### Skills
+
+| File | Purpose |
+|------|---------|
+| `skills/gitnexus/SKILL.md` | GitNexus code intelligence skill definition |
+| `skills/pageindex/SKILL.md` | PageIndex document retrieval skill definition |
+
+### Code Intelligence Bridges (`src/agents/tools/`)
+
+| File | Purpose |
+|------|---------|
+| `gitnexus-bridge.ts` | GitNexus MCP bridge — binary detection, registry, MCP process management |
+| `pageindex-bridge.ts` | PageIndex CLI bridge — binary detection, index discovery, CLI invocation |
+
 ### Gateway Handlers (`src/gateway/server-methods/`)
 
 | File | Purpose |
@@ -372,6 +506,7 @@ All new methods follow the existing handler pattern (validate → business logic
 | `sso.ts` | SSO provisioning gateway handlers |
 | `fleet.ts` | Fleet operations gateway handlers |
 | `audit-trail.ts` | Audit trail query/export gateway handlers |
+| `code-intel.ts` | Code intelligence gateway handlers (GitNexus + PageIndex) |
 
 ### Wizard (`src/wizard/`)
 

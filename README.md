@@ -1,3 +1,38 @@
+# 🦞 Omni — Enterprise OpenClaw
+
+> **This repo is [Omni](https://github.com/vcpandya/omni)**, an enterprise-hardened
+> fork of [OpenClaw](https://github.com/openclaw/openclaw). It adds a hash-chained
+> audit trail with W3C trace correlation, compliance profiles (Zero-Trust / SOC2 /
+> HIPAA / Standard), SSO provisioning with SAML+OIDC, fleet management, operator
+> RBAC, and a browser-based onboarding wizard — all additive on top of upstream.
+>
+> **See [`CHANGES.md`](CHANGES.md)** for the full enterprise feature set and
+> gateway method reference.
+
+### Run Omni from source
+
+Omni is not yet published to npm. The path advertised below (`npm install -g
+openclaw@latest`) installs **upstream OpenClaw**, not this fork. To run Omni
+itself:
+
+```bash
+git clone https://github.com/vcpandya/omni
+cd omni
+pnpm install
+pnpm build
+node openclaw.mjs onboard
+```
+
+Prefer a browser-guided setup? After `pnpm build`, start the gateway and open the
+[Control UI](https://docs.openclaw.ai/web) — Omni adds a wizard with compliance
+profile selection, OWASP coverage dashboard, Fleet overview, and Operators
+(RBAC) tabs.
+
+Two-page pitch deck: [`docs/pitch/omni-overview.html`](docs/pitch/omni-overview.html)
+(open in any browser or print to PDF for a landscape 16:9 deck).
+
+---
+
 # 🦞 OpenClaw — Personal AI Assistant
 
 <p align="center">

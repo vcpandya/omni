@@ -135,3 +135,36 @@ Run locally:
 pip install detect-secrets==1.5.0
 detect-secrets scan --baseline .secrets.baseline
 ```
+
+## Known-accepted transitive advisories
+
+`pnpm audit --prod` reports two residual high-severity advisories after all
+fixable overrides have been applied. Both are **transitive and out of our
+direct control**; Omni is not exploitable through either code path.
+
+### `hono` ≤ 4.11.10 — [GHSA-q5qw-h33p-qvwr](https://github.com/advisories/GHSA-q5qw-h33p-qvwr)
+
+- **Path:** `. > @buape/carbon > @hono/node-server > hono`
+- **Patched version:** `>= 4.12.4`. An override is pinned to `4.12.4` in
+  `package.json#pnpm.overrides`, but the resolution cannot take effect because
+  `@buape/carbon`'s beta release baked `hono@4.11.10` into its pnpm
+  content-hash identifier.
+- **Why accepted:** Per the repository's `AGENTS.md`, the Carbon dependency
+  must not be updated. The advisory covers Hono's `serveStatic` middleware;
+  Omni's gateway does not call `serveStatic`, and the only Hono surface
+  reachable in this tree is Carbon's internal Discord transport, which does
+  not expose a public file server.
+- **Removal trigger:** re-run `pnpm install` after Carbon ships a release that
+  relaxes its `hono` peer constraint.
+
+### `lodash` 4.17.23 — [GHSA-r5fr-rjxr-66jc](https://github.com/advisories/GHSA-r5fr-rjxr-66jc)
+
+- **Path:** `extensions/matrix > @vector-im/matrix-bot-sdk > lowdb > lodash`
+- **Patched version:** `>= 4.18.0`. This version has not been published to
+  npm at the time of writing; the advisory's patched range is a forward-looking
+  marker.
+- **Why accepted:** The advisory requires attacker control of the string fed
+  to `_.template()`. `lowdb` calls a fixed set of lodash utilities (`_.get`,
+  `_.set`, `_.chain`, etc.) and never invokes `_.template`, so the exploit
+  path does not exist in this tree.
+- **Removal trigger:** re-run `pnpm install` after lodash 4.18.0 is published.
