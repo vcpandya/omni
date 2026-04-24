@@ -36,7 +36,7 @@ Source: [`src/wizard/compliance-profiles.ts`](src/wizard/compliance-profiles.ts)
 
 ### OWASP Coverage Mapping
 
-Controls map to **OWASP Top 10 for LLM Applications 2025** (LLM01–LLM10) and **OWASP Agentic AI Top 10** (AG01–AG05).
+Controls map to **OWASP Top 10 for LLM Applications 2025** (LLM01–LLM10) and **OWASP Agentic AI Top 10** (AG01–AG10) — 20 risks fully mapped.
 
 Source: [`src/wizard/owasp-mapping.ts`](src/wizard/owasp-mapping.ts) · Docs: [`docs/security/owasp.md`](docs/security/owasp.md)
 
@@ -304,18 +304,55 @@ Skill: [`skills/pageindex/SKILL.md`](skills/pageindex/SKILL.md) · Source: [`src
 
 ---
 
-## Web Wizard (Control UI)
+## Control UI Surfaces
 
-Browser-based onboarding wizard as an alternative to `openclaw onboard` CLI:
+Browser-based admin surfaces, all sharing the **Operator Console** design language (dark-first, token-driven, responsive to phone/tablet/desktop). Access via the [Control UI](https://docs.openclaw.ai/web) when the Gateway is running.
 
-- Multi-step flow with sidebar progress tracking.
-- Compliance profile selection with visual cards and risk indicators.
+### Onboarding Wizard
+
+- Multi-step flow with sidebar progress tracking (numbered pip rail with calm breathing pulse on the active step).
+- Compliance profile cards with trust-ladder capability matrix (Sandbox · Auth · Logging · Tool safety — 1–4 ticks filled per strictness).
 - Enterprise provider setup (Azure, Bedrock, Vertex AI).
-- Real-time progress feedback.
-
-Access via the [Control UI](https://docs.openclaw.ai/web) when the Gateway is running.
+- OWASP dashboard with hero score + LLM/Agentic risk columns.
+- `⏎` keyboard hint on primary CTAs; space/Enter keyboard activation on cards.
+- `prefers-reduced-motion` respected on the pulse animation and hero glow.
 
 Source: [`ui/src/ui/views/wizard.ts`](ui/src/ui/views/wizard.ts) · [`ui/src/ui/controllers/wizard.ts`](ui/src/ui/controllers/wizard.ts)
+
+### Operators (RBAC)
+
+- Role-based access control list: Admin · Operator · Viewer · Auditor.
+- Stat row (Total / Active / Admins / Disabled), role filter chips, search, show-disabled toggle.
+- Create / edit modal with 4-up role picker (title + description per role); immutable-on-edit email field; disable toggle.
+- Invite modal with two-stage flow (form → issued-token view with copy-to-clipboard + 7-day TTL reminder).
+- Per-row SSO / Disabled / "You" badges. Delete flow with self-deletion guard (client + gateway side).
+- Tabular grid on desktop, card-stack on mobile (≤ 640 px).
+
+Source: [`ui/src/ui/views/operators.ts`](ui/src/ui/views/operators.ts) · [`ui/src/ui/controllers/operators.ts`](ui/src/ui/controllers/operators.ts)
+
+### Fleet
+
+- Dashboard: Devices / Agents / Active ops / Last report stat row, trust distribution stacked bar (high · medium · low · untrusted) with legend, recent operations list.
+- **Bulk operations panel:** Target device ids textarea drives three actions — Policy push (with Fields sub-input), Rotate tokens, Remote wipe.
+- **Remote wipe has dedicated danger treatment:** red-bordered card, confirmation checkbox gates the Run button, gateway also independently requires `confirm: true`.
+- Operation detail modal: 4-stat summary (status / success % / targets / initiated), per-device results with OK / FAIL / SKIP / UNREACHABLE status badges.
+
+Source: [`ui/src/ui/views/fleet.ts`](ui/src/ui/views/fleet.ts) · [`ui/src/ui/controllers/fleet.ts`](ui/src/ui/controllers/fleet.ts)
+
+### SSO
+
+- Provider status card: Configured / Not-configured badge, IdP display name + protocol (SAML / OIDC), Auto-provision + Enforced flag pills, inline hint when unconfigured.
+- Attribute-mapping dry-run: JSON editor (sensible default payload), invalid-JSON inline error, Run disabled until SSO is configured.
+- Result block: Validation pill (VALID / INVALID), "Would auto-provision" pill, mapped email / displayName / groups (chip-rendered).
+
+Source: [`ui/src/ui/views/sso.ts`](ui/src/ui/views/sso.ts) · [`ui/src/ui/controllers/sso.ts`](ui/src/ui/controllers/sso.ts)
+
+### Activity (audit trail viewer)
+
+- Timeline view with filters (category / severity / search), integrity verification, live-stream subscription, JSON / CSV / JSONL export.
+- Category tokens now centralized at `:root` — 13 category colors including the 5 Omni enterprise categories (`operator`, `remote-agent`, `sso`, `fleet`, `code-intel`) theme-swappable via CSS custom properties.
+
+Source: [`ui/src/ui/views/activity.ts`](ui/src/ui/views/activity.ts) · [`ui/src/ui/controllers/activity.ts`](ui/src/ui/controllers/activity.ts)
 
 ---
 
@@ -428,11 +465,12 @@ All new methods follow the existing handler pattern (validate → business logic
 
 ## Test Coverage
 
-**175 new tests** across 14 test files:
+**189 new tests** across 15 test files:
 
 | Test File | Tests | Module |
 |-----------|-------|--------|
-| `src/security/audit-trail.test.ts` | 15 | Audit trail |
+| `src/security/audit-trail.test.ts` | 19 | Audit trail (includes hash-chain integrity, trace correlation, large-file recovery) |
+| `src/security/trace-context.test.ts` | 13 | W3C trace context carrier |
 | `src/security/device-trust.test.ts` | 16 | Device trust |
 | `src/security/llm-audit.test.ts` | 9 | LLM audit |
 | `src/security/skill-trust.test.ts` | 9 | Skill trust |
@@ -535,9 +573,20 @@ All new methods follow the existing handler pattern (validate → business logic
 
 | File | Purpose |
 |------|---------|
-| `ui/views/wizard.ts` | Web wizard onboarding view |
-| `ui/controllers/wizard.ts` | Web wizard controller |
-| `ui/views/activity.ts` | Activity dashboard view |
-| `ui/controllers/activity.ts` | Activity dashboard controller |
-| `styles/wizard.css` | Wizard styles |
-| `styles/activity.css` | Activity dashboard styles |
+| `ui/views/wizard.ts` · `ui/controllers/wizard.ts` · `styles/wizard.css` | Onboarding wizard (Operator Console design) |
+| `ui/views/activity.ts` · `ui/controllers/activity.ts` · `styles/activity.css` | Audit-trail timeline viewer with tokenized category palette |
+| `ui/views/operators.ts` · `ui/controllers/operators.ts` · `styles/operators.css` | RBAC operator CRUD + invite flow |
+| `ui/views/fleet.ts` · `ui/controllers/fleet.ts` · `styles/fleet.css` | Fleet dashboard + bulk-ops panel (policy push, token rotation, remote wipe) |
+| `ui/views/sso.ts` · `ui/controllers/sso.ts` · `styles/sso.css` | SSO status + attribute-mapping dry-run |
+
+### Security helpers (`src/security/`)
+
+| File | Purpose |
+|------|---------|
+| `trace-context.ts` · `trace-context.test.ts` | W3C Trace Context carrier (AsyncLocalStorage-backed); correlates audit events to distributed spans |
+
+### Test utilities (`src/test-utils/`)
+
+| File | Purpose |
+|------|---------|
+| `can-symlink.ts` | Runtime probe for skipping symlink-dependent tests on unprivileged environments (Windows without Developer Mode, chrooted sandboxes) |

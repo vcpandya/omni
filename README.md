@@ -24,9 +24,23 @@ node openclaw.mjs onboard
 ```
 
 Prefer a browser-guided setup? After `pnpm build`, start the gateway and open the
-[Control UI](https://docs.openclaw.ai/web) — Omni adds a wizard with compliance
-profile selection, OWASP coverage dashboard, Fleet overview, and Operators
-(RBAC) tabs.
+[Control UI](https://docs.openclaw.ai/web). Omni adds these enterprise admin surfaces
+on top of the standard OpenClaw UI:
+
+- **Wizard** — compliance profile selection (Zero-Trust / SOC2 / HIPAA / Std / Dev),
+  enterprise AI provider setup (Azure OpenAI / AWS Bedrock / Google Vertex AI),
+  OWASP coverage dashboard (20/20 risks mapped across LLM Top 10 2025 + Agentic Top 10 2026).
+- **Activity** — hash-chained audit trail viewer with filters, integrity verify,
+  live streaming, JSON/CSV/JSONL export.
+- **Fleet** — device trust posture, bulk operations (policy push, token rotation,
+  remote wipe with confirmation gate).
+- **Operators** — RBAC CRUD with invite flow, role cards, self-deletion guard.
+- **SSO** — SAML / OIDC status + attribute-mapping dry-run.
+
+Every view is dark-first, token-driven, and responsive down to 375 px (mobile).
+See [`CHANGES.md`](CHANGES.md) for the full enterprise feature catalog and the
+gateway method reference (`operators.*`, `fleet.*`, `sso.*`, `remote.agents.*`,
+`code-intel.*`, `skills.trust.*`).
 
 Two-page pitch deck: [`docs/pitch/omni-overview.html`](docs/pitch/omni-overview.html)
 (open in any browser or print to PDF for a landscape 16:9 deck).
