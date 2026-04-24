@@ -4,6 +4,11 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { resolveBrewExecutable, resolveBrewPathDirs } from "./brew.js";
 
+// On Windows NTFS, `chmod 0o644` does not actually remove the "executable" bit
+// in a way the resolver can detect — every file is effectively executable.
+// Tests that rely on that POSIX semantic are skipped on Windows.
+const SKIP_IF_WINDOWS = process.platform === "win32";
+
 describe("brew helpers", () => {
   async function withBrewRoot(run: (tmp: string) => Promise<void>) {
     const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-brew-"));
@@ -63,7 +68,7 @@ describe("brew helpers", () => {
     });
   });
 
-  it("falls back to prefix when HOMEBREW_BREW_FILE is not executable", async () => {
+  it.skipIf(SKIP_IF_WINDOWS)("falls back to prefix when HOMEBREW_BREW_FILE is not executable", async () => {
     await withBrewRoot(async (tmp) => {
       const explicit = path.join(tmp, "custom", "brew");
       const prefix = path.join(tmp, "prefix");

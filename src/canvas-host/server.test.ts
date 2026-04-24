@@ -6,6 +6,9 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { WebSocket } from "ws";
 import { rawDataToString } from "../infra/ws.js";
+import { canCreateSymlinkSync } from "../test-utils/can-symlink.js";
+
+const SKIP_IF_NO_SYMLINK = !canCreateSymlinkSync();
 import { defaultRuntime } from "../runtime.js";
 import { A2UI_PATH, CANVAS_HOST_PATH, CANVAS_WS_PATH, injectCanvasLiveReload } from "./a2ui.js";
 import { createCanvasHostHandler, startCanvasHost } from "./server.js";
@@ -248,7 +251,7 @@ describe("canvas host", () => {
     }
   }, 20_000);
 
-  it("serves A2UI scaffold and blocks traversal/symlink escapes", async () => {
+  it.skipIf(SKIP_IF_NO_SYMLINK)("serves A2UI scaffold and blocks traversal/symlink escapes", async () => {
     const dir = await createCaseDir();
     const a2uiRoot = path.resolve(process.cwd(), "src/canvas-host/a2ui");
     const bundlePath = path.join(a2uiRoot, "a2ui.bundle.js");

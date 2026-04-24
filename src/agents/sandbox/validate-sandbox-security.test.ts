@@ -2,6 +2,7 @@ import { mkdtempSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { canCreateSymlinkSync } from "../../test-utils/can-symlink.js";
 import {
   getBlockedBindReason,
   validateBindMounts,
@@ -10,6 +11,8 @@ import {
   validateApparmorProfile,
   validateSandboxSecurity,
 } from "./validate-sandbox-security.js";
+
+const SKIP_IF_NO_SYMLINK = !canCreateSymlinkSync();
 
 describe("getBlockedBindReason", () => {
   it("blocks common Docker socket directories", () => {
@@ -74,7 +77,7 @@ describe("validateBindMounts", () => {
     expect(() => validateBindMounts(["//etc//passwd:/mnt/passwd"])).toThrow(/blocked path "\/etc"/);
   });
 
-  it("blocks symlink escapes into blocked directories", () => {
+  it.skipIf(SKIP_IF_NO_SYMLINK)("blocks symlink escapes into blocked directories", () => {
     const dir = mkdtempSync(join(tmpdir(), "openclaw-sbx-"));
     const link = join(dir, "etc-link");
     symlinkSync("/etc", link);

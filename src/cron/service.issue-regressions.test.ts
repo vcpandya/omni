@@ -800,7 +800,10 @@ describe("Cron issue regressions", () => {
     });
 
     const timerPromise = onTimer(state);
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    // 20ms was too tight on Windows (setTimeout jitter + slower event-loop
+    // scheduling meant neither job had started when the assertion ran).
+    // 100ms comfortably covers both platforms without slowing CI noticeably.
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     expect(peakActiveRuns).toBe(2);
 

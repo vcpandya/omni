@@ -3,6 +3,9 @@ import type { AddressInfo } from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { canCreateSymlinkSync } from "../test-utils/can-symlink.js";
+
+const SKIP_IF_NO_SYMLINK = !canCreateSymlinkSync();
 
 let MEDIA_DIR = "";
 const cleanOldMedia = vi.fn().mockResolvedValue(undefined);
@@ -86,15 +89,21 @@ describe("media server", () => {
         await writeMediaFile("file2", "hello");
       },
     },
-    {
-      testName: "blocks symlink escaping outside media dir",
-      mediaPath: "link-out",
-      setup: async () => {
-        const target = path.join(process.cwd(), "package.json"); // outside MEDIA_DIR
-        const link = path.join(MEDIA_DIR, "link-out");
-        await fs.symlink(target, link);
-      },
-    },
+    // Symlink escape test only runs where fs.symlink is permitted (skips on
+    // Windows w/o Developer Mode and other unprivileged sandboxes).
+    ...(SKIP_IF_NO_SYMLINK
+      ? []
+      : [
+          {
+            testName: "blocks symlink escaping outside media dir",
+            mediaPath: "link-out",
+            setup: async () => {
+              const target = path.join(process.cwd(), "package.json"); // outside MEDIA_DIR
+              const link = path.join(MEDIA_DIR, "link-out");
+              await fs.symlink(target, link);
+            },
+          },
+        ]),
   ] as const)("$testName", async (testCase) => {
     await testCase.setup?.();
     const res = await fetch(mediaUrl(testCase.mediaPath));

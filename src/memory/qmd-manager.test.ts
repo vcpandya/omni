@@ -4,6 +4,9 @@ import os from "node:os";
 import path from "node:path";
 import type { Mock } from "vitest";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { canCreateSymlinkSync } from "../test-utils/can-symlink.js";
+
+const SKIP_IF_NO_SYMLINK = !canCreateSymlinkSync();
 
 const { logWarnMock, logDebugMock, logInfoMock } = vi.hoisted(() => ({
   logWarnMock: vi.fn(),
@@ -1177,7 +1180,7 @@ describe("QmdMemoryManager", () => {
     await manager.close();
   });
 
-  it("blocks non-markdown or symlink reads for qmd paths", async () => {
+  it.skipIf(SKIP_IF_NO_SYMLINK)("blocks non-markdown or symlink reads for qmd paths", async () => {
     const { manager } = await createManager();
 
     const textPath = path.join(workspaceDir, "secret.txt");

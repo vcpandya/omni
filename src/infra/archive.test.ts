@@ -4,8 +4,11 @@ import path from "node:path";
 import JSZip from "jszip";
 import * as tar from "tar";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { canCreateSymlinkSync } from "../test-utils/can-symlink.js";
 import type { ArchiveSecurityError } from "./archive.js";
 import { extractArchive, resolveArchiveKind, resolvePackedRootDir } from "./archive.js";
+
+const SKIP_IF_NO_SYMLINK = !canCreateSymlinkSync();
 
 let fixtureRoot = "";
 let fixtureCount = 0;
@@ -85,7 +88,7 @@ describe("archive utils", () => {
     });
   });
 
-  it("rejects zip entries that traverse pre-existing destination symlinks", async () => {
+  it.skipIf(SKIP_IF_NO_SYMLINK)("rejects zip entries that traverse pre-existing destination symlinks", async () => {
     await withArchiveCase("zip", async ({ workDir, archivePath, extractDir }) => {
       const outsideDir = path.join(workDir, "outside");
       await fs.mkdir(outsideDir, { recursive: true });

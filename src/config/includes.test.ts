@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { canCreateSymlinkSync } from "../test-utils/can-symlink.js";
 import {
   CircularIncludeError,
   ConfigIncludeError,
@@ -9,6 +10,8 @@ import {
   type IncludeResolver,
   resolveConfigIncludes,
 } from "./includes.js";
+
+const SKIP_IF_NO_SYMLINK = !canCreateSymlinkSync();
 
 const ROOT_DIR = path.parse(process.cwd()).root;
 const CONFIG_DIR = path.join(ROOT_DIR, "config");
@@ -567,7 +570,7 @@ describe("security: path traversal protection (CWE-22)", () => {
       expect(resolve(obj, files, rootConfigPath)).toEqual({ root: true });
     });
 
-    it("allows include files when the config root path is a symlink", async () => {
+    it.skipIf(SKIP_IF_NO_SYMLINK)("allows include files when the config root path is a symlink", async () => {
       const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-includes-symlink-"));
       try {
         const realRoot = path.join(tempRoot, "real");
