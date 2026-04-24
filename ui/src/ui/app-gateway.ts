@@ -184,6 +184,24 @@ export function connectGateway(host: GatewayHost) {
     },
   });
   host.client = client;
+  // Keep nested admin-surface states (operators / fleet) pointing at the
+  // current gateway client so their controller loaders can make RPCs without
+  // each view having to re-thread the client.
+  const hostWithAdmin = host as unknown as {
+    operators?: { client: GatewayBrowserClient | null; connected: boolean };
+    fleet?: { client: GatewayBrowserClient | null; connected: boolean };
+    sso?: { client: GatewayBrowserClient | null; connected: boolean };
+    connected?: boolean;
+  };
+  if (hostWithAdmin.operators) {
+    hostWithAdmin.operators.client = client;
+  }
+  if (hostWithAdmin.fleet) {
+    hostWithAdmin.fleet.client = client;
+  }
+  if (hostWithAdmin.sso) {
+    hostWithAdmin.sso.client = client;
+  }
   previousClient?.stop();
   client.start();
 }

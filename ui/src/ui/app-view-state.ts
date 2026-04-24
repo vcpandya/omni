@@ -244,6 +244,10 @@ export type AppViewState = {
   activityIntegrityOk: boolean | null;
   activityStatsToday: number;
   activityStatsCritical: number;
+  // Enterprise admin surfaces — full state delegated to per-view controllers.
+  operators: import("./controllers/operators.ts").OperatorsState;
+  fleet: import("./controllers/fleet.ts").FleetState;
+  sso: import("./controllers/sso.ts").SsoState;
   updateAvailable: import("./types.js").UpdateAvailable | null;
   client: GatewayBrowserClient | null;
   refreshSessionsAfterChat: Set<string>;

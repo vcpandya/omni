@@ -56,7 +56,10 @@ import { loadAssistantIdentity as loadAssistantIdentityInternal } from "./contro
 import type { DevicePairingList } from "./controllers/devices.ts";
 import type { ExecApprovalRequest } from "./controllers/exec-approval.ts";
 import type { ExecApprovalsFile, ExecApprovalsSnapshot } from "./controllers/exec-approvals.ts";
+import { makeFleetState, type FleetState } from "./controllers/fleet.ts";
+import { makeOperatorsState, type OperatorsState } from "./controllers/operators.ts";
 import type { SkillMessage } from "./controllers/skills.ts";
+import { makeSsoState, type SsoState } from "./controllers/sso.ts";
 import type { GatewayBrowserClient, GatewayHelloOk } from "./gateway.ts";
 import type { Tab } from "./navigation.ts";
 import { loadSettings, type UiSettings } from "./storage.ts";
@@ -362,6 +365,13 @@ export class OpenClawApp extends LitElement {
   @state() activityIntegrityOk: boolean | null = null;
   @state() activityStatsToday = 0;
   @state() activityStatsCritical = 0;
+
+  // Enterprise admin surfaces — nested sub-states to keep host surface small.
+  // Each sub-state owns its own client ref; kept in sync with host.client in
+  // app-gateway.ts when a new gateway session is established.
+  @state() operators: OperatorsState = makeOperatorsState();
+  @state() fleet: FleetState = makeFleetState();
+  @state() sso: SsoState = makeSsoState();
 
   client: GatewayBrowserClient | null = null;
   private chatScrollFrame: number | null = null;

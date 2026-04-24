@@ -1,0 +1,593 @@
+/* ── Operators · RBAC admin surface ──────────────────────────
+   Operator Console design language — dark-first, token-driven. */
+
+.operators {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 24px;
+}
+
+/* ── Header ────────────────────────────────────────────────── */
+.operators-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.operators-header__left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.operators-title {
+  font-family: var(--font-display, var(--sans, inherit));
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-strong);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+.operators-header__subtitle {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.operators-header__right {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ── Stats ─────────────────────────────────────────────────── */
+.operators-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+.operators-stat {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 8px);
+  background: var(--card);
+}
+.operators-stat__value {
+  font-family: var(--font-display, var(--sans, inherit));
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.operators-stat__value--admin {
+  color: var(--accent);
+}
+.operators-stat__value--muted {
+  color: var(--muted);
+}
+.operators-stat__label {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ── Filters ──────────────────────────────────────────────── */
+.operators-filters {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.operators-search {
+  flex: 1 1 240px;
+  min-width: 220px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 8px);
+  background: var(--card);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  transition:
+    border-color 120ms ease-out,
+    box-shadow 120ms ease-out;
+}
+.operators-search:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring, 0 0 0 3px var(--accent-subtle));
+}
+.operators-filter-group {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+}
+.operators-filter-chip {
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition:
+    background 120ms ease-out,
+    color 120ms ease-out;
+}
+.operators-filter-chip:hover {
+  color: var(--text);
+  background: var(--bg-hover, rgba(255, 255, 255, 0.04));
+}
+.operators-filter-chip--active {
+  color: var(--accent-foreground);
+  background: var(--accent);
+}
+.operators-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.operators-toggle input {
+  accent-color: var(--accent);
+}
+
+/* ── Table ────────────────────────────────────────────────── */
+.operators-table {
+  overflow: hidden;
+  padding: 0;
+}
+.operators-row {
+  display: grid;
+  grid-template-columns: 2fr 1.2fr 0.7fr 2fr 0.9fr 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+  transition: background 120ms ease-out;
+}
+.operators-row:last-child {
+  border-bottom: none;
+}
+.operators-row--head {
+  background: var(--card-elev, rgba(255, 255, 255, 0.02));
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+.operators-row:not(.operators-row--head):hover {
+  background: var(--bg-hover, rgba(255, 255, 255, 0.025));
+}
+.operators-row--disabled {
+  opacity: 0.55;
+}
+
+.operators-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.operators-cell--email {
+  flex-wrap: wrap;
+}
+.operators-cell--scopes {
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.operators-cell--actions {
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.operators-email {
+  color: var(--text-strong);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.operators-muted {
+  color: var(--muted);
+}
+
+.operators-role {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 9999px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.operators-role--admin {
+  color: var(--accent);
+  background: var(--accent-subtle);
+  border: 1px solid var(--accent);
+}
+.operators-role--operator {
+  color: var(--info);
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid var(--info);
+}
+.operators-role--viewer,
+.operators-role--auditor {
+  color: var(--muted);
+  background: var(--card-elev, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border);
+}
+
+.operators-scope {
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--card-elev, rgba(255, 255, 255, 0.04));
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.operators-badge {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.operators-badge--sso {
+  color: var(--info);
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+}
+.operators-badge--disabled {
+  color: var(--muted);
+  background: var(--card-elev, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border);
+}
+.operators-badge--self {
+  color: var(--accent);
+  background: var(--accent-subtle);
+  border: 1px solid var(--accent);
+}
+
+/* ── Empty / error / loading ──────────────────────────────── */
+.operators-empty {
+  padding: 40px 24px;
+  text-align: center;
+}
+.operators-empty__title {
+  color: var(--text-strong);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.operators-empty__hint {
+  color: var(--muted);
+  font-size: 13px;
+}
+.operators-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 24px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.operators-error {
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--danger);
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--danger);
+  font-size: 13px;
+}
+
+/* ── Shared modal primitives ──────────────────────────────── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  display: grid;
+  place-items: center;
+  z-index: 200;
+  animation: modal-fade-in 160ms ease-out;
+}
+.modal {
+  width: min(560px, calc(100vw - 48px));
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 0;
+  animation: modal-rise 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes modal-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes modal-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .modal-backdrop,
+  .modal {
+    animation: none;
+  }
+}
+.modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border);
+}
+.modal__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-strong);
+  margin: 0;
+}
+.modal__close {
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  font-size: 22px;
+  cursor: pointer;
+  padding: 0 6px;
+  line-height: 1;
+  border-radius: 6px;
+}
+.modal__close:hover {
+  color: var(--text-strong);
+  background: var(--bg-hover);
+}
+.modal__body {
+  padding: 22px 24px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.modal__error {
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--danger);
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--danger);
+  font-size: 12.5px;
+}
+.modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+/* ── Form field primitives ────────────────────────────────── */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.field--inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text);
+}
+.field__label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.field__input {
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  transition:
+    border-color 120ms ease-out,
+    box-shadow 120ms ease-out;
+}
+.field__input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring, 0 0 0 3px var(--accent-subtle));
+}
+.field__input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.field__hint {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.role-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+  margin-top: 4px;
+}
+.role-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  background: var(--bg);
+  transition:
+    border-color 120ms ease-out,
+    background 120ms ease-out;
+}
+.role-card input[type="radio"] {
+  display: none;
+}
+.role-card:hover {
+  border-color: var(--muted-strong, var(--muted));
+}
+.role-card--active {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+.role-card__title {
+  font-weight: 600;
+  color: var(--text-strong);
+  font-size: 13px;
+}
+.role-card__desc {
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+/* ── Invite-issued view ───────────────────────────────────── */
+.invite-issued__lede {
+  font-size: 13px;
+  color: var(--text);
+  margin: 0;
+  line-height: 1.5;
+}
+.invite-issued__hint {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.5;
+}
+.invite-token {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: var(--card-elev, rgba(255, 255, 255, 0.03));
+}
+.invite-token__value {
+  flex: 1;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-strong);
+  word-break: break-all;
+  user-select: all;
+}
+
+/* ── Buttons — reuse from the existing btn system if present ──
+   These rules only apply when a global .btn system isn't available; they
+   are scoped tightly so they don't override an existing palette. */
+.btn.btn--xs {
+  padding: 4px 10px;
+  font-size: 11px;
+}
+.btn.btn--danger {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: transparent;
+}
+.btn.btn--danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.1);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .operators {
+    padding: 20px 16px;
+  }
+  .operators-row {
+    grid-template-columns: 1.5fr 0.7fr 1fr;
+  }
+  .operators-row--head .operators-cell:nth-child(2),
+  .operators-row--head .operators-cell:nth-child(4),
+  .operators-row--head .operators-cell:nth-child(5),
+  .operators-row:not(.operators-row--head) .operators-cell:nth-child(2),
+  .operators-row:not(.operators-row--head) .operators-cell:nth-child(4),
+  .operators-row:not(.operators-row--head) .operators-cell:nth-child(5) {
+    display: none;
+  }
+}
+
+/* At narrow widths the tabular grid collapses into a stacked card per row:
+   email + badges on top, role pill + action buttons below. Heading row is
+   hidden entirely — redundant once the layout is a card. */
+@media (max-width: 640px) {
+  .operators-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+  .operators-row--head {
+    display: none;
+  }
+  .operators-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    padding: 12px 16px;
+  }
+  .operators-row:not(.operators-row--head) .operators-cell:nth-child(2),
+  .operators-row:not(.operators-row--head) .operators-cell:nth-child(4),
+  .operators-row:not(.operators-row--head) .operators-cell:nth-child(5) {
+    display: flex;
+  }
+  .operators-cell--actions {
+    justify-content: flex-start;
+    padding-top: 4px;
+  }
+  /* Modal sizing: on small screens use full-viewport with padding. */
+  .modal {
+    width: calc(100vw - 24px);
+    max-height: calc(100vh - 24px);
+  }
+  .modal__header,
+  .modal__body {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+  .role-grid {
+    grid-template-columns: 1fr;
+  }
+  /* Filter chip group: allow wrapping so "Auditor" doesn't clip. */
+  .operators-filter-group {
+    flex-wrap: wrap;
+  }
+}

@@ -36,6 +36,9 @@ export const en: TranslationMap = {
     debug: "Debug",
     logs: "Logs",
     activity: "Activity",
+    fleet: "Fleet",
+    operators: "Operators",
+    sso: "SSO",
   },
   subtitles: {
     agents: "Manage agent workspaces, tools, and identities.",
@@ -52,6 +55,9 @@ export const en: TranslationMap = {
     debug: "Gateway snapshots, events, and manual RPC calls.",
     logs: "Live tail of the gateway file logs.",
     activity: "Security event timeline with real-time monitoring.",
+    fleet: "Device trust posture and recent bulk operations.",
+    operators: "Role-based access control for operators and invites.",
+    sso: "SAML / OIDC status and attribute mapping dry-run.",
   },
   overview: {
     access: {

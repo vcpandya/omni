@@ -16,11 +16,14 @@ import { loadCronJobs, loadCronStatus } from "./controllers/cron.ts";
 import { loadDebug } from "./controllers/debug.ts";
 import { loadDevices } from "./controllers/devices.ts";
 import { loadExecApprovals } from "./controllers/exec-approvals.ts";
+import { loadFleet } from "./controllers/fleet.ts";
 import { loadLogs } from "./controllers/logs.ts";
 import { loadNodes } from "./controllers/nodes.ts";
+import { loadOperators } from "./controllers/operators.ts";
 import { loadPresence } from "./controllers/presence.ts";
 import { loadSessions } from "./controllers/sessions.ts";
 import { loadSkills } from "./controllers/skills.ts";
+import { loadSsoStatus } from "./controllers/sso.ts";
 import {
   inferBasePathFromPathname,
   normalizeBasePath,
@@ -244,6 +247,30 @@ export async function refreshActiveTab(host: SettingsHost) {
     host.logsAtBottom = true;
     await loadLogs(host as unknown as OpenClawApp, { reset: true });
     scheduleLogsScroll(host as unknown as Parameters<typeof scheduleLogsScroll>[0], true);
+  }
+  if (host.tab === "fleet") {
+    const adminHost = host as unknown as {
+      fleet?: import("./controllers/fleet.ts").FleetState;
+    };
+    if (adminHost.fleet) {
+      await loadFleet(adminHost.fleet);
+    }
+  }
+  if (host.tab === "operators") {
+    const adminHost = host as unknown as {
+      operators?: import("./controllers/operators.ts").OperatorsState;
+    };
+    if (adminHost.operators) {
+      await loadOperators(adminHost.operators);
+    }
+  }
+  if (host.tab === "sso") {
+    const adminHost = host as unknown as {
+      sso?: import("./controllers/sso.ts").SsoState;
+    };
+    if (adminHost.sso) {
+      await loadSsoStatus(adminHost.sso);
+    }
   }
 }
 

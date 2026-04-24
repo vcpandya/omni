@@ -5,6 +5,14 @@ import { refreshChatAvatar } from "./app-chat.ts";
 import { renderUsageTab } from "./app-render-usage-tab.ts";
 import { renderChatControls, renderTab, renderThemeToggle } from "./app-render.helpers.ts";
 import type { AppViewState } from "./app-view-state.ts";
+import {
+  loadActivity,
+  loadMoreActivity,
+  verifyIntegrity,
+  exportActivity,
+  subscribeActivityStream,
+  type ActivityFilters,
+} from "./controllers/activity.ts";
 import { loadAgentFileContent, loadAgentFiles, saveAgentFile } from "./controllers/agent-files.ts";
 import { loadAgentIdentities, loadAgentIdentity } from "./controllers/agent-identity.ts";
 import { loadAgentSkills } from "./controllers/agent-skills.ts";
@@ -54,6 +62,7 @@ import {
 } from "./controllers/skills.ts";
 import { icons } from "./icons.ts";
 import { normalizeBasePath, TAB_GROUPS, subtitleForTab, titleForTab } from "./navigation.ts";
+import { renderActivity } from "./views/activity.ts";
 import { renderAgents } from "./views/agents.ts";
 import { renderChannels } from "./views/channels.ts";
 import { renderChat } from "./views/chat.ts";
@@ -61,23 +70,16 @@ import { renderConfig } from "./views/config.ts";
 import { renderCron } from "./views/cron.ts";
 import { renderDebug } from "./views/debug.ts";
 import { renderExecApprovalPrompt } from "./views/exec-approval.ts";
+import { renderFleet } from "./views/fleet.ts";
 import { renderGatewayUrlConfirmation } from "./views/gateway-url-confirmation.ts";
 import { renderInstances } from "./views/instances.ts";
 import { renderLogs } from "./views/logs.ts";
 import { renderNodes } from "./views/nodes.ts";
+import { renderOperators } from "./views/operators.ts";
 import { renderOverview } from "./views/overview.ts";
 import { renderSessions } from "./views/sessions.ts";
 import { renderSkills } from "./views/skills.ts";
-import {
-  loadActivity,
-  loadMoreActivity,
-  verifyIntegrity,
-  exportActivity,
-  subscribeActivityStream,
-  DEFAULT_ACTIVITY_FILTERS,
-  type ActivityFilters,
-} from "./controllers/activity.ts";
-import { renderActivity } from "./views/activity.ts";
+import { renderSso } from "./views/sso.ts";
 import { renderWizard } from "./views/wizard.ts";
 
 const AVATAR_DATA_RE = /^data:/i;
@@ -384,7 +386,9 @@ export function renderApp(state: AppViewState) {
                 onVerify: () => verifyIntegrity(state),
                 onExport: (format: "json" | "csv" | "jsonl") => {
                   void exportActivity(state, format).then((data) => {
-                    if (!data) return;
+                    if (!data) {
+                      return;
+                    }
                     const blob = new Blob([data], { type: "text/plain" });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement("a");
@@ -400,6 +404,42 @@ export function renderApp(state: AppViewState) {
                   } else {
                     subscribeActivityStream(state);
                   }
+                },
+              })
+            : nothing
+        }
+
+        ${
+          state.tab === "fleet"
+            ? renderFleet({
+                ...state.fleet,
+                onChange: () => {
+                  state.fleet = { ...state.fleet };
+                },
+              })
+            : nothing
+        }
+
+        ${
+          state.tab === "operators"
+            ? renderOperators({
+                ...state.operators,
+                // Pass the current operator id so the UI can guard self-deletion.
+                // (Falls back to null when the gateway auth layer hasn't surfaced it.)
+                selfOperatorId: state.operators.selfOperatorId,
+                onChange: () => {
+                  state.operators = { ...state.operators };
+                },
+              })
+            : nothing
+        }
+
+        ${
+          state.tab === "sso"
+            ? renderSso({
+                ...state.sso,
+                onChange: () => {
+                  state.sso = { ...state.sso };
                 },
               })
             : nothing
