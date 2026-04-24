@@ -138,6 +138,15 @@ const BASE_METHODS = [
   "skills.trust.quarantine",
   "skills.trust.release",
   "skills.trust.audit",
+  // Code intelligence
+  "code-intel.status",
+  "code-intel.index",
+  "code-intel.query",
+  "code-intel.impact",
+  "code-intel.drift",
+  // PageIndex document retrieval
+  "code-intel.pageindex.status",
+  "code-intel.pageindex.index",
 ];
 
 export function listGatewayMethods(): string[] {

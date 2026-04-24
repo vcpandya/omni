@@ -20,6 +20,8 @@ import { createSessionsSpawnTool } from "./tools/sessions-spawn-tool.js";
 import { createSubagentsTool } from "./tools/subagents-tool.js";
 import { createTtsTool } from "./tools/tts-tool.js";
 import { createWebFetchTool, createWebSearchTool } from "./tools/web-tools.js";
+import { createGitNexusToolSync } from "./tools/gitnexus-bridge.js";
+import { createPageIndexToolSync } from "./tools/pageindex-bridge.js";
 import { resolveWorkspaceRoot } from "./workspace-dir.js";
 
 export function createOpenClawTools(options?: {
@@ -163,6 +165,24 @@ export function createOpenClawTools(options?: {
     ...(webSearchTool ? [webSearchTool] : []),
     ...(webFetchTool ? [webFetchTool] : []),
     ...(imageTool ? [imageTool] : []),
+    // Code intelligence: GitNexus bridge (availability checked at tool call time)
+    createGitNexusToolSync({
+      workspaceDir,
+      agentId: resolveSessionAgentId({
+        sessionKey: options?.agentSessionKey,
+        config: options?.config,
+      }),
+      sessionKey: options?.agentSessionKey,
+    }),
+    // Document retrieval: PageIndex bridge (availability checked at tool call time)
+    createPageIndexToolSync({
+      workspaceDir,
+      agentId: resolveSessionAgentId({
+        sessionKey: options?.agentSessionKey,
+        config: options?.config,
+      }),
+      sessionKey: options?.agentSessionKey,
+    }),
   ];
 
   const pluginTools = resolvePluginTools({

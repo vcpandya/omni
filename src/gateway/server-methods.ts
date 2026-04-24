@@ -10,6 +10,7 @@ import { operatorHandlers } from "./server-methods/operators.js";
 import { remoteAgentHandlers } from "./server-methods/remote-agents.js";
 import { ssoHandlers } from "./server-methods/sso.js";
 import { fleetHandlers } from "./server-methods/fleet.js";
+import { codeIntelHandlers } from "./server-methods/code-intel.js";
 import { browserHandlers } from "./server-methods/browser.js";
 import { channelsHandlers } from "./server-methods/channels.js";
 import { chatHandlers } from "./server-methods/chat.js";
@@ -98,6 +99,7 @@ export const coreGatewayHandlers: GatewayRequestHandlers = {
   ...remoteAgentHandlers,
   ...ssoHandlers,
   ...fleetHandlers,
+  ...codeIntelHandlers,
 };
 
 export async function handleGatewayRequest(

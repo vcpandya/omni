@@ -4,6 +4,7 @@ import { createSubsystemLogger } from "../logging/subsystem.js";
 import { getGlobalHookRunner } from "../plugins/hook-runner-global.js";
 import { isPlainObject } from "../utils.js";
 import { emitToolEvent } from "../security/audit-trail-emitters.js";
+import { emitCodeIntelEvent } from "../security/audit-trail-emitters.js";
 import type { LlmAuditHookResult } from "../security/llm-audit.js";
 import { normalizeToolName } from "./tool-policy.js";
 import type { AnyAgentTool } from "./tools/common.js";
@@ -190,6 +191,32 @@ export async function runBeforeToolCallHook(args: {
     }
   } catch (err) {
     log.warn(`LLM audit hook failed: tool=${toolName} error=${String(err)}`);
+  }
+
+  // ── GitNexus Impact Analysis (runs for write/edit when available) ──
+  if (toolName === "write" || toolName === "edit") {
+    try {
+      const filePath =
+        isPlainObject(params) && typeof (params as Record<string, unknown>).file_path === "string"
+          ? ((params as Record<string, unknown>).file_path as string)
+          : isPlainObject(params) && typeof (params as Record<string, unknown>).path === "string"
+            ? ((params as Record<string, unknown>).path as string)
+            : null;
+      if (filePath) {
+        const { runImpactAnalysisForFile } = await import("./tools/gitnexus-bridge.js");
+        const impact = await runImpactAnalysisForFile(filePath, process.cwd());
+        if (impact?.available && impact.impact) {
+          log.info(`code-intel: impact analysis injected for ${toolName} on ${filePath}`);
+          emitCodeIntelEvent(
+            { actorId: args.ctx?.agentId ?? "agent", connId: args.ctx?.sessionKey },
+            "code-intel.impact_checked",
+            { toolName, filePath, automatic: true },
+          );
+        }
+      }
+    } catch (err) {
+      log.debug(`code-intel impact hook skipped: ${String(err)}`);
+    }
   }
 
   const hookRunner = getGlobalHookRunner();

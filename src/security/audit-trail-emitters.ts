@@ -213,6 +213,31 @@ export function emitFleetEvent(
   });
 }
 
+// ── Code Intelligence Events ────────────────────────────────────
+
+export function emitCodeIntelEvent(
+  actor: AuditActor,
+  action:
+    | "code-intel.indexed"
+    | "code-intel.impact_checked"
+    | "code-intel.rename_executed"
+    | "code-intel.query"
+    | "code-intel.drift_detected"
+    | "code-intel.pageindex_generated"
+    | "code-intel.pageindex_retrieved",
+  detail?: Record<string, unknown>,
+): void {
+  const severity: AuditEventSeverity =
+    action === "code-intel.drift_detected" ? "warn" : "info";
+  recordAuditEvent({
+    category: "code-intel",
+    action,
+    severity,
+    actor,
+    detail,
+  });
+}
+
 // ── Device Events ───────────────────────────────────────────────
 
 export function emitDeviceEvent(
